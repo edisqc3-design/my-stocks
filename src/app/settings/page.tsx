@@ -3,11 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { connectPrinter, isPrinterConnected } from "@/lib/label-printer";
 import { exportBackup, downloadBackupFile, restoreBackup, parseBackupFile } from "@/lib/backup";
 import { syncAll } from "@/lib/sync";
 import SyncStatusBadge from "@/components/SyncStatusBadge";
-import { Plus, Trash2, Printer, Download, Upload, RefreshCw, LogOut, Pencil, Check, X } from "lucide-react";
+import { Plus, Trash2, Download, Upload, RefreshCw, LogOut, Pencil, Check, X } from "lucide-react";
 
 type Location = { id: string; name: string };
 type Category = { id: string; name: string };
@@ -18,7 +17,6 @@ export default function SettingsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [newLocation, setNewLocation] = useState("");
   const [newCategory, setNewCategory] = useState("");
-  const [printerStatus, setPrinterStatus] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
@@ -31,7 +29,6 @@ export default function SettingsPage() {
     setLocations(locs ?? []);
     const { data: cats } = await supabase.from("categories").select("id, name").order("name");
     setCategories(cats ?? []);
-    setPrinterStatus(isPrinterConnected());
   }
 
   useEffect(() => {
@@ -122,16 +119,6 @@ export default function SettingsPage() {
     }
     setEditingCategoryId(null);
     load();
-  }
-
-  async function handleConnectPrinter() {
-    try {
-      const name = await connectPrinter();
-      setPrinterStatus(true);
-      alert(`"${name}" 프린터에 연결되었습니다.`);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "연결 실패");
-    }
   }
 
   async function handleBackup() {
@@ -318,38 +305,6 @@ export default function SettingsPage() {
               <Plus size={18} />
             </button>
           </div>
-        </div>
-      </section>
-
-      {/* 라벨 프린터 */}
-      <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--card)] shadow-[0_1px_2px_rgba(36,31,54,0.04),0_16px_28px_-20px_rgba(36,31,54,0.16)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(36,31,54,0.05),0_20px_36px_-16px_rgba(76,47,201,0.2)]">
-        <div className="tag-notch flex items-center gap-3 border-b border-dashed border-[var(--line)] px-5 py-4">
-          <span className="font-tag flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--paper)] text-[10px] font-semibold text-[var(--primary)]">
-            PRN
-          </span>
-          <div>
-            <p className="font-tag text-[10px] uppercase tracking-[0.18em] text-[var(--ink-soft)]">Section</p>
-            <h2 className="font-display text-[15px] font-semibold text-[var(--ink)]">라벨 프린터</h2>
-          </div>
-        </div>
-        <div className="p-5">
-          <div className="mb-4 flex items-center gap-2 text-sm">
-            <span
-              className={`h-2 w-2 rounded-full ${printerStatus ? "bg-[var(--ok)]" : "bg-[var(--ink-soft)]/40"}`}
-            />
-            <span className="text-[var(--ink-soft)]">
-              {printerStatus ? "Ablemark M60 연결됨" : "연결된 프린터가 없습니다"}
-            </span>
-          </div>
-          <button
-            onClick={handleConnectPrinter}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--primary)]/40 bg-[var(--primary-soft)]/50 py-3 font-medium text-[var(--primary)] transition hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] active:scale-[0.99]"
-          >
-            <Printer size={18} /> 프린터 연결
-          </button>
-          <p className="font-tag mt-3 text-[11px] tracking-wide text-[var(--ink-soft)]">
-            ※ 블루투스 라벨 출력은 안드로이드 Chrome에서만 지원됩니다.
-          </p>
         </div>
       </section>
 
