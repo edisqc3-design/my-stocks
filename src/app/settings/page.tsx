@@ -1,23 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { connectPrinter, isPrinterConnected } from "@/lib/label-printer";
 import { exportBackup, downloadBackupFile, restoreBackup, parseBackupFile } from "@/lib/backup";
 import { syncAll } from "@/lib/sync";
 import SyncStatusBadge from "@/components/SyncStatusBadge";
-import { Plus, Trash2, Printer, Download, Upload, RefreshCw } from "lucide-react";
+import { Plus, Trash2, Printer, Download, Upload, RefreshCw, LogOut } from "lucide-react";
 
 type Location = { id: string; name: string };
 type Category = { id: string; name: string };
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [locations, setLocations] = useState<Location[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [newLocation, setNewLocation] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [printerStatus, setPrinterStatus] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
 
   async function load() {
     const { data: locs } = await supabase.from("locations").select("id, name").order("name");
@@ -29,7 +32,14 @@ export default function SettingsPage() {
 
   useEffect(() => {
     load();
+    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
   }, []);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.replace("/login");
+    router.refresh();
+  }
 
   async function addLocation() {
     if (!newLocation.trim()) return;
@@ -291,6 +301,32 @@ export default function SettingsPage() {
             className="group flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--line)] py-3 text-sm font-medium text-[var(--ink)] transition hover:border-[var(--primary)]/40 hover:bg-[var(--paper)]"
           >
             <RefreshCw size={16} className="transition-transform duration-500 group-hover:rotate-180" /> 지금 동기화
+          </button>
+        </div>
+      </section>
+
+      {/* 계정 */}
+      <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--card)] shadow-[0_1px_2px_rgba(36,31,54,0.04),0_16px_28px_-20px_rgba(36,31,54,0.16)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(36,31,54,0.05),0_20px_36px_-16px_rgba(76,47,201,0.2)]">
+        <div className="tag-notch flex items-center gap-3 border-b border-dashed border-[var(--line)] px-5 py-4">
+          <span className="font-tag flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--paper)] text-[10px] font-semibold text-[var(--primary)]">
+            ACC
+          </span>
+          <div>
+            <p className="font-tag text-[10px] uppercase tracking-[0.18em] text-[var(--ink-soft)]">Section</p>
+            <h2 className="font-display text-[15px] font-semibold text-[var(--ink)]">계정</h2>
+          </div>
+        </div>
+        <div className="p-5">
+          {email && (
+            <p className="mb-3 text-sm text-[var(--ink-soft)]">
+              <span className="font-medium text-[var(--ink)]">{email}</span>(으)로 로그인됨
+            </p>
+          )}
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--danger)]/30 bg-[var(--danger)]/5 py-3 text-sm font-medium text-[var(--danger)] transition hover:border-[var(--danger)]/50 hover:bg-[var(--danger)]/10 active:scale-[0.99]"
+          >
+            <LogOut size={16} /> 로그아웃
           </button>
         </div>
       </section>
