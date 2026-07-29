@@ -7,7 +7,7 @@ import { connectPrinter, isPrinterConnected } from "@/lib/label-printer";
 import { exportBackup, downloadBackupFile, restoreBackup, parseBackupFile } from "@/lib/backup";
 import { syncAll } from "@/lib/sync";
 import SyncStatusBadge from "@/components/SyncStatusBadge";
-import { Plus, Trash2, Printer, Download, Upload, RefreshCw, LogOut } from "lucide-react";
+import { Plus, Trash2, Printer, Download, Upload, RefreshCw, LogOut, Pencil, Check, X } from "lucide-react";
 
 type Location = { id: string; name: string };
 type Category = { id: string; name: string };
@@ -21,6 +21,10 @@ export default function SettingsPage() {
   const [printerStatus, setPrinterStatus] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
+  const [editingLocationName, setEditingLocationName] = useState("");
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategoryName, setEditingCategoryName] = useState("");
 
   async function load() {
     const { data: locs } = await supabase.from("locations").select("id, name").order("name");
@@ -79,6 +83,44 @@ export default function SettingsPage() {
       alert(`카테고리 삭제 실패: ${error.message}`);
       return;
     }
+    load();
+  }
+
+  function startEditLocation(l: Location) {
+    setEditingLocationId(l.id);
+    setEditingLocationName(l.name);
+  }
+
+  async function saveEditLocation() {
+    if (!editingLocationId || !editingLocationName.trim()) return;
+    const { error } = await supabase
+      .from("locations")
+      .update({ name: editingLocationName.trim() })
+      .eq("id", editingLocationId);
+    if (error) {
+      alert(`사무실 수정 실패: ${error.message}`);
+      return;
+    }
+    setEditingLocationId(null);
+    load();
+  }
+
+  function startEditCategory(c: Category) {
+    setEditingCategoryId(c.id);
+    setEditingCategoryName(c.name);
+  }
+
+  async function saveEditCategory() {
+    if (!editingCategoryId || !editingCategoryName.trim()) return;
+    const { error } = await supabase
+      .from("categories")
+      .update({ name: editingCategoryName.trim() })
+      .eq("id", editingCategoryId);
+    if (error) {
+      alert(`카테고리 수정 실패: ${error.message}`);
+      return;
+    }
+    setEditingCategoryId(null);
     load();
   }
 
@@ -152,20 +194,42 @@ export default function SettingsPage() {
         </div>
         <div className="p-5">
           <ul className="mb-3 divide-y divide-dashed divide-[var(--line)]">
-            {locations.map((l) => (
-              <li key={l.id} className="flex items-center justify-between py-2.5 text-sm">
-                <span className="flex items-center gap-2.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
-                  {l.name}
-                </span>
-                <button
-                  onClick={() => removeLocation(l.id)}
-                  className="text-[var(--ink-soft)] transition-colors hover:text-[var(--danger)]"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </li>
-            ))}
+            {locations.map((l) =>
+              editingLocationId === l.id ? (
+                <li key={l.id} className="flex items-center gap-2 py-2">
+                  <input
+                    autoFocus
+                    value={editingLocationName}
+                    onChange={(e) => setEditingLocationName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && saveEditLocation()}
+                    className="flex-1 rounded-lg border border-[var(--primary)] bg-white px-2.5 py-1.5 text-sm text-[var(--ink)] outline-none"
+                  />
+                  <button onClick={saveEditLocation} className="text-[var(--ok)]">
+                    <Check size={16} />
+                  </button>
+                  <button onClick={() => setEditingLocationId(null)} className="text-[var(--ink-soft)]">
+                    <X size={16} />
+                  </button>
+                </li>
+              ) : (
+                <li key={l.id} className="group flex items-center justify-between py-2.5 text-sm">
+                  <button
+                    onClick={() => startEditLocation(l)}
+                    className="flex flex-1 items-center gap-2.5 text-left"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
+                    {l.name}
+                    <Pencil size={13} className="text-[var(--ink-soft)] opacity-0 transition-opacity group-hover:opacity-100" />
+                  </button>
+                  <button
+                    onClick={() => removeLocation(l.id)}
+                    className="text-[var(--ink-soft)] transition-colors hover:text-[var(--danger)]"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </li>
+              )
+            )}
             {locations.length === 0 && (
               <li className="py-2 text-sm text-[var(--ink-soft)]">등록된 사무실이 없습니다.</li>
             )}
@@ -200,20 +264,42 @@ export default function SettingsPage() {
         </div>
         <div className="p-5">
           <ul className="mb-3 divide-y divide-dashed divide-[var(--line)]">
-            {categories.map((c) => (
-              <li key={c.id} className="flex items-center justify-between py-2.5 text-sm">
-                <span className="flex items-center gap-2.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
-                  {c.name}
-                </span>
-                <button
-                  onClick={() => removeCategory(c.id)}
-                  className="text-[var(--ink-soft)] transition-colors hover:text-[var(--danger)]"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </li>
-            ))}
+            {categories.map((c) =>
+              editingCategoryId === c.id ? (
+                <li key={c.id} className="flex items-center gap-2 py-2">
+                  <input
+                    autoFocus
+                    value={editingCategoryName}
+                    onChange={(e) => setEditingCategoryName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && saveEditCategory()}
+                    className="flex-1 rounded-lg border border-[var(--primary)] bg-white px-2.5 py-1.5 text-sm text-[var(--ink)] outline-none"
+                  />
+                  <button onClick={saveEditCategory} className="text-[var(--ok)]">
+                    <Check size={16} />
+                  </button>
+                  <button onClick={() => setEditingCategoryId(null)} className="text-[var(--ink-soft)]">
+                    <X size={16} />
+                  </button>
+                </li>
+              ) : (
+                <li key={c.id} className="group flex items-center justify-between py-2.5 text-sm">
+                  <button
+                    onClick={() => startEditCategory(c)}
+                    className="flex flex-1 items-center gap-2.5 text-left"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
+                    {c.name}
+                    <Pencil size={13} className="text-[var(--ink-soft)] opacity-0 transition-opacity group-hover:opacity-100" />
+                  </button>
+                  <button
+                    onClick={() => removeCategory(c.id)}
+                    className="text-[var(--ink-soft)] transition-colors hover:text-[var(--danger)]"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </li>
+              )
+            )}
             {categories.length === 0 && (
               <li className="py-2 text-sm text-[var(--ink-soft)]">등록된 카테고리가 없습니다.</li>
             )}
