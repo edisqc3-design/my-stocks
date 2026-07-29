@@ -43,26 +43,42 @@ export default function SettingsPage() {
 
   async function addLocation() {
     if (!newLocation.trim()) return;
-    await supabase.from("locations").insert({ name: newLocation.trim() });
+    const { error } = await supabase.from("locations").insert({ name: newLocation.trim() });
+    if (error) {
+      alert(`사무실 추가 실패: ${error.message}`);
+      return;
+    }
     setNewLocation("");
     load();
   }
 
   async function addCategory() {
     if (!newCategory.trim()) return;
-    await supabase.from("categories").insert({ name: newCategory.trim() });
+    const { error } = await supabase.from("categories").insert({ name: newCategory.trim() });
+    if (error) {
+      alert(`카테고리 추가 실패: ${error.message}`);
+      return;
+    }
     setNewCategory("");
     load();
   }
 
   async function removeLocation(id: string) {
     if (!confirm("이 사무실을 삭제하시겠습니까? 소속 품목은 위치 미지정으로 남습니다.")) return;
-    await supabase.from("locations").delete().eq("id", id);
+    const { error } = await supabase.from("locations").delete().eq("id", id);
+    if (error) {
+      alert(`사무실 삭제 실패: ${error.message}`);
+      return;
+    }
     load();
   }
 
   async function removeCategory(id: string) {
-    await supabase.from("categories").delete().eq("id", id);
+    const { error } = await supabase.from("categories").delete().eq("id", id);
+    if (error) {
+      alert(`카테고리 삭제 실패: ${error.message}`);
+      return;
+    }
     load();
   }
 
