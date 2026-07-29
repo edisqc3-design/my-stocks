@@ -34,6 +34,12 @@ async function syncPendingItems() {
         location_id: p.locationId ?? null,
         quantity: p.quantity,
         min_quantity: p.minQuantity,
+        supplier: p.supplier ?? null,
+        purchase_date: p.purchaseDate ?? null,
+        unit_price: p.unitPrice ?? null,
+        reorder_url: p.reorderUrl ?? null,
+        expiry_date: p.expiryDate ?? null,
+        memo: p.memo ?? null,
       })
       .select()
       .single();

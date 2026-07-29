@@ -23,6 +23,12 @@ export interface PendingItem {
   locationId?: string;
   quantity: number;
   minQuantity: number;
+  supplier?: string;
+  purchaseDate?: string;
+  unitPrice?: number;
+  reorderUrl?: string;
+  expiryDate?: string;
+  memo?: string;
   photoDataUrls: string[]; // 오프라인 중 촬영한 사진(base64), 동기화 시 Storage 업로드
   createdAt: string;
   synced: boolean;
