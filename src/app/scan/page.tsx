@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeScannerState } from "html5-qrcode";
 import { supabase } from "@/lib/supabase";
 import { db } from "@/lib/offline-db";
 import { syncAll } from "@/lib/sync";
@@ -31,8 +31,24 @@ export default function ScanPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const scanner = new Html5Qrcode(SCANNER_ID);
     scannerRef.current = scanner;
+
+    // 카메라를 안전하게 정지 + 비디오 엘리먼트 정리 (정지 없이 DOM만 사라지면 브라우저가 죽는 문제 방지)
+    const shutdown = async () => {
+      try {
+        if (
+          scanner.getState() === Html5QrcodeScannerState.SCANNING ||
+          scanner.getState() === Html5QrcodeScannerState.PAUSED
+        ) {
+          await scanner.stop();
+        }
+        await scanner.clear();
+      } catch {
+        // 이미 정지되었거나 정리된 상태면 무시
+      }
+    };
 
     scanner
       .start(
@@ -41,11 +57,19 @@ export default function ScanPage() {
         (decodedText) => handleDecoded(decodedText),
         () => {}
       )
-      .then(() => setScanning(true))
+      .then(() => {
+        if (cancelled) {
+          // 시작이 끝나기 전에 이미 다른 화면으로 이동한 경우 바로 정지
+          shutdown();
+          return;
+        }
+        setScanning(true);
+      })
       .catch(() => setScanning(false));
 
     return () => {
-      scanner.stop().catch(() => {});
+      cancelled = true;
+      shutdown();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
