@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -7,6 +8,7 @@
   --line: #e4defa;
   --card: #ffffff;
   --primary: #7c5cf0;      /* 메인 퍼플 */
+  --primary-2: #4c2fc9;    /* 그라데이션 진한 끝단 */
   --primary-soft: #ece6fd;
   --signal: #7c5cf0;
   --ok: #2f9e6e;           /* 입고/정상 */
@@ -22,12 +24,55 @@
   --color-line: var(--line);
   --color-card: var(--card);
   --color-primary: var(--primary);
+  --color-primary-2: var(--primary-2);
   --color-primary-soft: var(--primary-soft);
   --color-signal: var(--signal);
   --color-ok: var(--ok);
   --color-warn: var(--warn);
   --color-danger: var(--danger);
   --color-navy: var(--navy);
+}
+
+/* 헤드라인용 디스플레이 서체 / 라벨 코드용 모노스페이스 — 창고 관리대장·물류 태그 느낌 */
+.font-display {
+  font-family: "Space Grotesk", "Pretendard", -apple-system, sans-serif;
+}
+.font-tag {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* 시그니처 모티프: 실물 창고 태그의 펀칭 홀처럼, 점선 구분선 위에 작은 원형 노치를 배치 */
+.tag-notch {
+  position: relative;
+}
+.tag-notch::before,
+.tag-notch::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  transform: translateY(50%);
+}
+.tag-notch::before {
+  left: 14px;
+}
+.tag-notch::after {
+  right: 14px;
+}
+
+/* 헤더 배경의 미세한 바코드 결 텍스처 */
+.barcode-texture {
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.16) 0px,
+    rgba(255, 255, 255, 0.16) 1px,
+    transparent 1px,
+    transparent 4px
+  );
 }
 
 body {
