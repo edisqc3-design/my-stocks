@@ -38,13 +38,13 @@ export default function DashboardPage() {
 
     setTotalItems(items?.length ?? 0);
     setTotalQuantity((items ?? []).reduce((sum, i) => sum + (i.quantity ?? 0), 0));
-    setLowStock((items ?? []).filter((i) => i.quantity <= i.min_quantity).slice(0, 5));
+    setLowStock((items ?? []).filter((i) => i.quantity <= i.min_quantity).slice(0, 50));
 
     const { data: moves } = await supabase
       .from("stock_movements")
       .select("id, type, quantity_change, created_at, items(name)")
       .order("created_at", { ascending: false })
-      .limit(8);
+      .limit(30);
     setRecent((moves as unknown as Movement[]) ?? []);
 
     setLoading(false);
@@ -129,18 +129,20 @@ export default function DashboardPage() {
             부족한 품목이 없습니다.
           </p>
         ) : (
-          <ul className="divide-y divide-[var(--line)]">
-            {lowStock.map((item) => (
-              <li key={item.id} className="flex items-center justify-between py-2.5">
-                <Link href={`/items/${item.id}`} className="font-medium">
-                  {item.name}
-                </Link>
-                <span className="text-sm text-[var(--danger)]">
-                  {item.quantity} / 최소 {item.min_quantity}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="max-h-72 overflow-y-auto pr-1">
+            <ul className="divide-y divide-[var(--line)]">
+              {lowStock.map((item) => (
+                <li key={item.id} className="flex items-center justify-between py-2.5">
+                  <Link href={`/items/${item.id}`} className="font-medium">
+                    {item.name}
+                  </Link>
+                  <span className="text-sm text-[var(--danger)]">
+                    {item.quantity} / 최소 {item.min_quantity}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </section>
 
@@ -150,26 +152,28 @@ export default function DashboardPage() {
         {recent.length === 0 ? (
           <p className="py-4 text-center text-sm text-[var(--ink-soft)]">이력이 없습니다.</p>
         ) : (
-          <ul className="divide-y divide-[var(--line)]">
-            {recent.map((m) => (
-              <li key={m.id} className="flex items-center gap-3 py-2.5">
-                {movementIcon[m.type]}
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{m.items?.name ?? "삭제된 품목"}</p>
-                  <p className="text-xs text-[var(--ink-soft)]">
-                    {movementLabel[m.type]} · {new Date(m.created_at).toLocaleString("ko-KR")}
-                  </p>
-                </div>
-                <span
-                  className="text-sm font-semibold"
-                  style={{ color: m.quantity_change >= 0 ? "var(--ok)" : "var(--danger)" }}
-                >
-                  {m.quantity_change > 0 ? "+" : ""}
-                  {m.quantity_change}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="max-h-96 overflow-y-auto pr-1">
+            <ul className="divide-y divide-[var(--line)]">
+              {recent.map((m) => (
+                <li key={m.id} className="flex items-center gap-3 py-2.5">
+                  {movementIcon[m.type]}
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{m.items?.name ?? "삭제된 품목"}</p>
+                    <p className="text-xs text-[var(--ink-soft)]">
+                      {movementLabel[m.type]} · {new Date(m.created_at).toLocaleString("ko-KR")}
+                    </p>
+                  </div>
+                  <span
+                    className="text-sm font-semibold"
+                    style={{ color: m.quantity_change >= 0 ? "var(--ok)" : "var(--danger)" }}
+                  >
+                    {m.quantity_change > 0 ? "+" : ""}
+                    {m.quantity_change}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </section>
     </div>
