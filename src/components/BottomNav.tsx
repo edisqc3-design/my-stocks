@@ -7,7 +7,7 @@ import { LayoutDashboard, ScanLine, Boxes, Settings } from "lucide-react";
 const TABS = [
   { href: "/", label: "홈", icon: LayoutDashboard },
   { href: "/scan", label: "스캔", icon: ScanLine },
-  { href: "/items", label: "품목", icon: Boxes },
+  { href: "/items", label: "재고현황", icon: Boxes },
   { href: "/settings", label: "설정", icon: Settings },
 ];
 
