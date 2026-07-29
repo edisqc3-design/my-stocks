@@ -193,7 +193,7 @@ export default function SettingsPage() {
           </div>
         </div>
         <div className="p-5">
-          <ul className="mb-3 divide-y divide-dashed divide-[var(--line)]">
+          <ul className="mb-3 max-h-64 divide-y divide-dashed divide-[var(--line)] overflow-y-auto pr-1">
             {locations.map((l) =>
               editingLocationId === l.id ? (
                 <li key={l.id} className="flex items-center gap-2 py-2">
@@ -263,7 +263,7 @@ export default function SettingsPage() {
           </div>
         </div>
         <div className="p-5">
-          <ul className="mb-3 divide-y divide-dashed divide-[var(--line)]">
+          <ul className="mb-3 max-h-64 divide-y divide-dashed divide-[var(--line)] overflow-y-auto pr-1">
             {categories.map((c) =>
               editingCategoryId === c.id ? (
                 <li key={c.id} className="flex items-center gap-2 py-2">
