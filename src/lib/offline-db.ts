@@ -41,16 +41,34 @@ export interface CachedItem {
   updatedAt: string;
 }
 
-const db = new Dexie("InventoryOfflineDB") as Dexie & {
+type InventoryDB = Dexie & {
   pendingMovements: EntityTable<PendingMovement, "id">;
   pendingItems: EntityTable<PendingItem, "id">;
   cachedItems: EntityTable<CachedItem, "id">;
 };
 
-db.version(1).stores({
-  pendingMovements: "++id, clientUuid, itemBarcode",
-  pendingItems: "++id, clientUuid, barcode",
-  cachedItems: "id, barcode, locationId",
-});
+function createDb(): InventoryDB {
+  const instance = new Dexie("InventoryOfflineDB") as InventoryDB;
+  instance.version(1).stores({
+    pendingMovements: "++id, clientUuid, itemBarcode",
+    pendingItems: "++id, clientUuid, barcode",
+    cachedItems: "id, barcode, locationId",
+  });
+  return instance;
+}
 
-export { db };
+// Next.js는 클라이언트 컴포넌트도 서버에서 먼저 렌더링(SSR)하는데,
+// 서버 환경에는 indexedDB가 없어 여기서 Dexie를 바로 생성하면 페이지 자체가 깨집니다.
+// 그래서 브라우저에서만 실제 인스턴스를 만들고, 서버에서는 사용 시점(useEffect 등, 클라이언트 전용)에만
+// 접근하도록 프록시로 대체해 SSR 단계에서 오류가 나지 않게 합니다.
+export const db: InventoryDB =
+  typeof window !== "undefined"
+    ? createDb()
+    : (new Proxy(
+        {},
+        {
+          get() {
+            throw new Error("offline-db는 브라우저에서만 사용할 수 있습니다.");
+          },
+        }
+      ) as InventoryDB);
