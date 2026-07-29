@@ -369,7 +369,7 @@ export default function SettingsPage() {
             <button
               disabled={busy === "backup"}
               onClick={handleBackup}
-              className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--primary-2)] py-3 text-sm font-semibold text-white shadow-[0_10px_20px_-10px_rgba(76,47,201,0.65)] transition active:scale-[0.98] disabled:opacity-60"
+              className="flex items-center justify-center gap-2 rounded-xl border border-[var(--primary)]/40 bg-[var(--primary-soft)]/50 py-3 text-sm font-semibold text-[var(--primary)] transition hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] active:scale-[0.98] disabled:opacity-60"
             >
               <Download size={16} /> {busy === "backup" ? "내보내는 중…" : "백업 내보내기"}
             </button>
