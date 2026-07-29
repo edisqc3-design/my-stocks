@@ -161,54 +161,69 @@ export default function ItemsPage() {
         </select>
       </div>
 
-      <ul className="divide-y divide-[var(--line)] rounded-2xl bg-[var(--card)] shadow-sm">
-        {loading && <li className="p-4 text-center text-sm text-[var(--ink-soft)]">불러오는 중…</li>}
-        {!loading && items.length === 0 && (
-          <li className="p-4 text-center text-sm text-[var(--ink-soft)]">품목이 없습니다.</li>
-        )}
-        {items.map((item) => {
-          const low = item.quantity <= item.min_quantity;
-          const thumb = item.item_photos?.[0]?.storage_path;
-          const thumbUrl = thumb ? supabase.storage.from("item-photos").getPublicUrl(thumb).data.publicUrl : null;
-          const lastIn = lastInDates[item.id];
-          return (
-            <li key={item.id}>
-              <Link href={`/items/${item.id}`} className="flex items-center gap-4 px-4 py-5">
-                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[var(--paper)]">
-                  {thumbUrl && !brokenThumbs.has(item.id) ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={thumbUrl}
-                      alt=""
-                      className="h-full w-full object-cover"
-                      onError={() => setBrokenThumbs((prev) => new Set(prev).add(item.id))}
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-[var(--ink-soft)]">
-                      <Search size={18} />
+      <div className="overflow-x-auto rounded-2xl bg-[var(--card)] shadow-sm">
+        <div className="min-w-[560px]">
+          {/* 열 헤더 */}
+          <div className="flex items-center gap-4 border-b border-[var(--line)] px-4 py-2">
+            <div className="w-16 shrink-0" />
+            <div className="grid flex-1 grid-cols-[1.6fr_1fr_1fr_0.7fr] divide-x divide-[var(--line)] text-xs font-medium text-[var(--ink-soft)]">
+              <div className="truncate pr-3">품목명</div>
+              <div className="truncate px-3">사무실(위치)</div>
+              <div className="truncate px-3">최근입고일</div>
+              <div className="px-3 text-right">현재수량</div>
+            </div>
+          </div>
+
+          <ul className="divide-y divide-[var(--line)]">
+            {loading && <li className="p-4 text-center text-sm text-[var(--ink-soft)]">불러오는 중…</li>}
+            {!loading && items.length === 0 && (
+              <li className="p-4 text-center text-sm text-[var(--ink-soft)]">품목이 없습니다.</li>
+            )}
+            {items.map((item) => {
+              const low = item.quantity <= item.min_quantity;
+              const thumb = item.item_photos?.[0]?.storage_path;
+              const thumbUrl = thumb ? supabase.storage.from("item-photos").getPublicUrl(thumb).data.publicUrl : null;
+              const lastIn = lastInDates[item.id];
+              return (
+                <li key={item.id}>
+                  <Link href={`/items/${item.id}`} className="flex items-center gap-4 px-4 py-5">
+                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[var(--paper)]">
+                      {thumbUrl && !brokenThumbs.has(item.id) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={thumbUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          onError={() => setBrokenThumbs((prev) => new Set(prev).add(item.id))}
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-[var(--ink-soft)]">
+                          <Search size={18} />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium">{item.name}</p>
-                  <p className="text-xs text-[var(--ink-soft)]">
-                    {item.locations?.name ?? "위치 미지정"}
-                  </p>
-                  <p className="text-xs text-[var(--ink-soft)]">
-                    최근입고 {lastIn ? new Date(lastIn).toLocaleDateString("ko-KR") : "-"}
-                  </p>
-                </div>
-                <span
-                  className="text-sm font-semibold"
-                  style={{ color: low ? "var(--danger)" : "var(--ink)" }}
-                >
-                  {item.quantity}
-                </span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+                    <div className="grid flex-1 grid-cols-[1.6fr_1fr_1fr_0.7fr] items-center divide-x divide-[var(--line)] text-sm">
+                      <p className="truncate pr-3 font-medium">{item.name}</p>
+                      <p className="truncate px-3 text-xs text-[var(--ink-soft)]">
+                        {item.locations?.name ?? "위치 미지정"}
+                      </p>
+                      <p className="truncate px-3 text-xs text-[var(--ink-soft)]">
+                        {lastIn ? new Date(lastIn).toLocaleDateString("ko-KR") : "-"}
+                      </p>
+                      <p
+                        className="px-3 text-right font-semibold"
+                        style={{ color: low ? "var(--danger)" : "var(--ink)" }}
+                      >
+                        {item.quantity}
+                      </p>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }
