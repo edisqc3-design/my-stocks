@@ -165,12 +165,12 @@ export default function ItemsPage() {
         <div className="min-w-[560px]">
           {/* 열 헤더 */}
           <div className="flex items-center gap-4 border-b border-[var(--line)] px-4 py-2">
-            <div className="w-16 shrink-0" />
-            <div className="grid flex-1 grid-cols-[1.6fr_1fr_1fr_0.7fr] divide-x divide-[var(--line)] text-xs font-medium text-[var(--ink-soft)]">
-              <div className="truncate pr-3">품목명</div>
-              <div className="truncate px-3">사무실(위치)</div>
-              <div className="truncate px-3">최근입고일</div>
-              <div className="px-3 text-right">현재수량</div>
+            <div className="w-20 shrink-0" />
+            <div className="grid flex-1 grid-cols-4 divide-x divide-[var(--line)] text-xs font-medium text-[var(--ink-soft)]">
+              <div className="truncate px-3 text-center">품목명</div>
+              <div className="truncate px-3 text-center">사무실(위치)</div>
+              <div className="truncate px-3 text-center">최근입고일</div>
+              <div className="truncate px-3 text-center">현재수량</div>
             </div>
           </div>
 
@@ -187,7 +187,7 @@ export default function ItemsPage() {
               return (
                 <li key={item.id}>
                   <Link href={`/items/${item.id}`} className="flex items-center gap-4 px-4 py-5">
-                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[var(--paper)]">
+                    <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[var(--paper)]">
                       {thumbUrl && !brokenThumbs.has(item.id) ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -198,20 +198,20 @@ export default function ItemsPage() {
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-[var(--ink-soft)]">
-                          <Search size={18} />
+                          <Search size={20} />
                         </div>
                       )}
                     </div>
-                    <div className="grid flex-1 grid-cols-[1.6fr_1fr_1fr_0.7fr] items-center divide-x divide-[var(--line)] text-sm">
-                      <p className="truncate pr-3 font-medium">{item.name}</p>
-                      <p className="truncate px-3 text-xs text-[var(--ink-soft)]">
+                    <div className="grid flex-1 grid-cols-4 items-center divide-x divide-[var(--line)] text-sm">
+                      <p className="truncate px-3 text-center font-medium">{item.name}</p>
+                      <p className="truncate px-3 text-center text-xs text-[var(--ink-soft)]">
                         {item.locations?.name ?? "위치 미지정"}
                       </p>
-                      <p className="truncate px-3 text-xs text-[var(--ink-soft)]">
+                      <p className="truncate px-3 text-center text-xs text-[var(--ink-soft)]">
                         {lastIn ? new Date(lastIn).toLocaleDateString("ko-KR") : "-"}
                       </p>
                       <p
-                        className="px-3 text-right font-semibold"
+                        className="truncate px-3 text-center font-semibold"
                         style={{ color: low ? "var(--danger)" : "var(--ink)" }}
                       >
                         {item.quantity}
