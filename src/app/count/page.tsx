@@ -111,7 +111,7 @@ export default function StockCountPage() {
         note: "재고 실사 반영",
         client_uuid: crypto.randomUUID(),
       });
-      await supabase.from("items").update({ quantity: e.countedQuantity }).eq("id", e.itemId);
+      // items.quantity는 DB 트리거(trg_stock_movements_apply)가 자동으로 반영합니다.
     }
     alert("실사 결과가 재고 수량에 반영되었습니다.");
     setPhase("setup");
