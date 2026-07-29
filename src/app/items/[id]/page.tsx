@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { printItemLabel, connectPrinter, isPrinterConnected } from "@/lib/label-printer";
-import { Printer, Trash2, ArrowLeft, Repeat, Pencil, Check, X } from "lucide-react";
+import { Trash2, ArrowLeft, Repeat, Pencil, Check, X } from "lucide-react";
 
 type ItemDetail = {
   id: string;
@@ -94,18 +93,6 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
     });
     await supabase.from("items").update({ location_id: moveTarget }).eq("id", item.id);
     load();
-  }
-
-  async function handleReprint() {
-    if (!item || !item.barcode) return;
-    try {
-      if (!isPrinterConnected()) {
-        await connectPrinter();
-      }
-      await printItemLabel({ name: item.name, barcodeValue: item.barcode });
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "출력에 실패했습니다.");
-    }
   }
 
   async function handleSaveEdit() {
@@ -256,13 +243,6 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
           </button>
         </div>
       </div>
-
-      <button
-        onClick={handleReprint}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--primary)] py-3 font-medium text-[var(--primary)]"
-      >
-        <Printer size={18} /> QR 라벨 다시 출력
-      </button>
 
       {/* 입출고 이력 */}
       <div className="rounded-2xl bg-[var(--card)] p-4 shadow-sm">
