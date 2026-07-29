@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Html5Qrcode, Html5QrcodeScannerState } from "html5-qrcode";
 import { supabase } from "@/lib/supabase";
 import { db } from "@/lib/offline-db";
@@ -21,8 +21,12 @@ type ScannedItem = {
 
 const SCANNER_ID = "scan-reader";
 
-export default function ScanPage() {
+function ScanForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  const rawMode = params.get("mode");
+  const mode: "in" | "out" | null = rawMode === "in" || rawMode === "out" ? rawMode : null;
+  const title = mode === "in" ? "입고" : mode === "out" ? "출고" : "스캔";
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [scanning, setScanning] = useState(false);
   const [found, setFound] = useState<ScannedItem | null>(null);
@@ -184,14 +188,16 @@ export default function ScanPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">스캔</h1>
+        <h1 className="text-xl font-bold">{title}</h1>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => router.push("/count")}
-            className="flex items-center gap-1 rounded-full border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-soft)]"
-          >
-            <ClipboardCheck size={14} /> 재고 실사
-          </button>
+          {mode === null && (
+            <button
+              onClick={() => router.push("/count")}
+              className="flex items-center gap-1 rounded-full border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-soft)]"
+            >
+              <ClipboardCheck size={14} /> 재고 실사
+            </button>
+          )}
           <SyncStatusBadge />
         </div>
       </div>
@@ -203,7 +209,11 @@ export default function ScanPage() {
         )}
       </div>
       <p className="text-center text-sm text-[var(--ink-soft)]">
-        바코드 또는 QR코드를 카메라에 비춰주세요
+        {mode === "in"
+          ? "입고할 품목의 바코드 또는 QR코드를 카메라에 비춰주세요"
+          : mode === "out"
+          ? "출고할 품목의 바코드 또는 QR코드를 카메라에 비춰주세요"
+          : "바코드 또는 QR코드를 카메라에 비춰주세요"}
       </p>
 
       {/* 등록된 품목 스캔 시 하단 시트 */}
@@ -248,22 +258,40 @@ export default function ScanPage() {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          {mode === "in" ? (
             <button
               disabled={busy}
               onClick={() => applyMovement("in")}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[var(--ok)] py-3 font-semibold text-white disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--ok)] py-3 font-semibold text-white disabled:opacity-60"
             >
               <ArrowDownCircle size={18} /> 입고
             </button>
+          ) : mode === "out" ? (
             <button
               disabled={busy}
               onClick={() => applyMovement("out")}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[var(--danger)] py-3 font-semibold text-white disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--danger)] py-3 font-semibold text-white disabled:opacity-60"
             >
               <ArrowUpCircle size={18} /> 출고
             </button>
-          </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                disabled={busy}
+                onClick={() => applyMovement("in")}
+                className="flex items-center justify-center gap-2 rounded-xl bg-[var(--ok)] py-3 font-semibold text-white disabled:opacity-60"
+              >
+                <ArrowDownCircle size={18} /> 입고
+              </button>
+              <button
+                disabled={busy}
+                onClick={() => applyMovement("out")}
+                className="flex items-center justify-center gap-2 rounded-xl bg-[var(--danger)] py-3 font-semibold text-white disabled:opacity-60"
+              >
+                <ArrowUpCircle size={18} /> 출고
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -286,5 +314,13 @@ export default function ScanPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ScanPage() {
+  return (
+    <Suspense fallback={null}>
+      <ScanForm />
+    </Suspense>
   );
 }
