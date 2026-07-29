@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { printItemLabel, connectPrinter } from "@/lib/label-printer";
+import { printItemLabel, connectPrinter, isPrinterConnected } from "@/lib/label-printer";
 import { Printer, Trash2, ArrowLeft, Repeat, Pencil, Check, X } from "lucide-react";
 
 type ItemDetail = {
@@ -99,7 +99,9 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   async function handleReprint() {
     if (!item || !item.barcode) return;
     try {
-      await connectPrinter();
+      if (!isPrinterConnected()) {
+        await connectPrinter();
+      }
       await printItemLabel({ name: item.name, barcodeValue: item.barcode });
     } catch (err) {
       alert(err instanceof Error ? err.message : "출력에 실패했습니다.");
