@@ -23,9 +23,16 @@ type CategoryOption = { id: string; name: string };
 type ReadSnapshot = { quantity: number; min_quantity: number };
 type ReadMap = Record<string, ReadSnapshot>;
 
+// 모바일 화면에서 사용자가 옮긴 FAB 위치(우측/하단 기준 오프셋, px)
+type FabPos = { right: number; bottom: number };
+
 const READ_STORAGE_KEY = "stock-notif-read-v1";
 const LOCATION_FILTER_STORAGE_KEY = "stock-notif-location-filter-v1";
 const CATEGORY_FILTER_STORAGE_KEY = "stock-notif-category-filter-v1";
+const FAB_POS_STORAGE_KEY = "stock-notif-fab-pos-v1";
+const MOBILE_BREAKPOINT = 1024; // globals.css의 데스크톱 브레이크포인트와 동일
+const FAB_SIZE = 52;
+const DRAG_THRESHOLD = 6; // 이 이상 움직여야 "드래그"로 인정(단순 클릭과 구분)
 
 function loadReadMap(): ReadMap {
   if (typeof window === "undefined") return {};
@@ -45,8 +52,40 @@ function saveReadMap(map: ReadMap) {
   }
 }
 
+function loadFabPos(): FabPos | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(FAB_POS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.right === "number" && typeof parsed?.bottom === "number") return parsed;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function saveFabPos(pos: FabPos) {
+  try {
+    window.localStorage.setItem(FAB_POS_STORAGE_KEY, JSON.stringify(pos));
+  } catch {
+    // 무시
+  }
+}
+
+function clampFabPos(pos: FabPos): FabPos {
+  const maxRight = Math.max(8, window.innerWidth - FAB_SIZE - 8);
+  const maxBottom = Math.max(8, window.innerHeight - FAB_SIZE - 8);
+  return {
+    right: Math.min(Math.max(pos.right, 8), maxRight),
+    bottom: Math.min(Math.max(pos.bottom, 8), maxBottom),
+  };
+}
+
 // 재고 부족(quantity <= min_quantity) 품목을 앱 전역에서 우측 하단 FAB로 안내합니다.
 // 대시보드 상단의 동기화 배지(SyncStatusBadge)와 겹치지 않도록 화면에 고정 배치합니다.
+// 모바일에서는 다른 콘텐츠와 겹칠 수 있어 사용자가 원하는 위치로 드래그해 옮길 수 있고,
+// 이동한 위치는 localStorage에 저장되어 페이지 이동/새로고침 후에도 유지됩니다.
 export default function NotificationBell() {
   const [items, setItems] = useState<LowStockItem[]>([]);
   const [locations, setLocations] = useState<LocationOption[]>([]);
@@ -55,9 +94,21 @@ export default function NotificationBell() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [readMap, setReadMap] = useState<ReadMap>({});
   const [open, setOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [fabPos, setFabPos] = useState<FabPos | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  // 초기 마운트 시 localStorage에서 읽음 상태 / 마지막 위치 필터 복원
+  const dragStateRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    startRight: number;
+    startBottom: number;
+    dragged: boolean;
+  } | null>(null);
+  const suppressClickRef = useRef(false);
+
+  // 초기 마운트 시 localStorage에서 읽음 상태 / 마지막 위치 필터 / FAB 위치 복원
   useEffect(() => {
     setReadMap(loadReadMap());
     try {
@@ -68,6 +119,17 @@ export default function NotificationBell() {
     } catch {
       // 무시
     }
+
+    const saved = loadFabPos();
+    if (saved) setFabPos(clampFabPos(saved));
+
+    function handleResize() {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+      setFabPos((prev) => (prev ? clampFabPos(prev) : prev));
+    }
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const load = useCallback(async () => {
@@ -183,12 +245,72 @@ export default function NotificationBell() {
     };
   }, [open]);
 
+  // 모바일에서만 버튼을 드래그로 옮길 수 있도록 함(데스크톱은 기존 고정 위치 유지)
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLButtonElement>) => {
+      if (!isMobile) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      dragStateRef.current = {
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        startRight: window.innerWidth - rect.right,
+        startBottom: window.innerHeight - rect.bottom,
+        dragged: false,
+      };
+      e.currentTarget.setPointerCapture(e.pointerId);
+    },
+    [isMobile]
+  );
+
+  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragStateRef.current;
+    if (!drag) return;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    if (!drag.dragged && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+    drag.dragged = true;
+    const next = clampFabPos({
+      right: drag.startRight - dx,
+      bottom: drag.startBottom - dy,
+    });
+    setFabPos(next);
+  }, []);
+
+  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragStateRef.current;
+    if (!drag) return;
+    if (e.currentTarget.hasPointerCapture(drag.pointerId)) {
+      e.currentTarget.releasePointerCapture(drag.pointerId);
+    }
+    if (drag.dragged) {
+      suppressClickRef.current = true;
+      setFabPos((prev) => {
+        if (prev) saveFabPos(prev);
+        return prev;
+      });
+    }
+    dragStateRef.current = null;
+  }, []);
+
+  const handleButtonClick = useCallback(() => {
+    if (suppressClickRef.current) {
+      // 방금 드래그로 위치를 옮긴 경우, 뒤따라오는 클릭 이벤트는 무시(패널이 열리지 않도록)
+      suppressClickRef.current = false;
+      return;
+    }
+    setOpen((v) => !v);
+  }, []);
+
   // 배지는 위치 필터와 무관하게 "전체 기준 안읽음" 개수를 보여줍니다.
   const unreadCount = items.filter((item) => !isRead(item)).length;
   const hasUnreadInView = filteredItems.some((item) => !isRead(item));
 
+  const customPositionStyle: React.CSSProperties | undefined =
+    isMobile && fabPos ? { right: fabPos.right, bottom: fabPos.bottom } : undefined;
+
   return (
-    <div ref={wrapRef} className="notification-fab">
+    <div ref={wrapRef} className="notification-fab" style={customPositionStyle}>
       {open && (
         <div className="absolute bottom-16 right-0 flex max-h-[26rem] w-80 flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--card)] shadow-[0_10px_28px_rgba(36,31,54,0.2)]">
           <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
@@ -292,10 +414,18 @@ export default function NotificationBell() {
       )}
 
       <button
-        onClick={() => setOpen((v) => !v)}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onClick={handleButtonClick}
         aria-label={unreadCount > 0 ? `재고 부족 알림 ${unreadCount}건` : "알림함"}
         className="relative flex h-13 w-13 items-center justify-center rounded-full text-white shadow-[0_6px_18px_rgba(124,92,240,0.45)] transition-transform active:scale-95"
-        style={{ background: unreadCount > 0 ? "var(--danger)" : "var(--primary)", width: 52, height: 52 }}
+        style={{
+          background: unreadCount > 0 ? "var(--danger)" : "var(--primary)",
+          width: FAB_SIZE,
+          height: FAB_SIZE,
+          touchAction: isMobile ? "none" : undefined,
+        }}
       >
         {unreadCount > 0 ? <AlertTriangle size={22} /> : <Bell size={22} />}
         {unreadCount > 0 && (
