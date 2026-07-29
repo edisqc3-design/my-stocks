@@ -18,6 +18,7 @@ export default function SettingsPage() {
   const [newLocation, setNewLocation] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [syncResultLabel, setSyncResultLabel] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
   const [editingLocationName, setEditingLocationName] = useState("");
@@ -123,17 +124,17 @@ export default function SettingsPage() {
 
   async function handleSyncNow() {
     setBusy("sync");
+    setSyncResultLabel(null);
     const result = await syncAll();
     setBusy(null);
-    // alert()는 화면이 그려지기 전에 뜰 수 있어, 한 박자 늦춰서 버튼 상태가 먼저 반영되게 함
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    if (result.reason === "offline") {
-      alert("오프라인 상태입니다. 인터넷 연결 후 다시 시도해주세요.");
-    } else if (result.reason === "error") {
-      alert("동기화 중 오류가 발생했습니다.");
-    } else {
-      alert("동기화가 완료되었습니다.");
-    }
+    const label =
+      result.reason === "offline"
+        ? "오프라인 상태입니다"
+        : result.reason === "error"
+        ? "동기화 실패"
+        : "동기화 완료";
+    setSyncResultLabel(label);
+    setTimeout(() => setSyncResultLabel(null), 2000);
     load();
   }
 
@@ -376,7 +377,7 @@ export default function SettingsPage() {
               size={16}
               className={`transition-transform duration-500 ${busy === "sync" ? "animate-spin" : "group-hover:rotate-180"}`}
             />
-            {busy === "sync" ? "동기화 중…" : "지금 동기화"}
+            {busy === "sync" ? "동기화 중…" : syncResultLabel ?? "지금 동기화"}
           </button>
         </div>
       </section>
