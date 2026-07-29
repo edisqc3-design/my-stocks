@@ -101,7 +101,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
       .select("id, type, quantity_change, created_at, note")
       .eq("item_id", id)
       .order("created_at", { ascending: false })
-      .limit(20);
+      .limit(50);
     setMovements(mv ?? []);
 
     const { data: locs } = await supabase.from("locations").select("id, name").order("name");
@@ -667,6 +667,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
         {movements.length === 0 ? (
           <p className="py-3 text-center text-sm text-[var(--ink-soft)]">이력이 없습니다.</p>
         ) : (
+          <div className="max-h-96 overflow-y-auto pr-1">
           <ul className="divide-y divide-[var(--line)]">
             {movements.map((m) => {
               const editable = m.type !== "move";
@@ -743,6 +744,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
               );
             })}
           </ul>
+          </div>
         )}
       </div>
 
