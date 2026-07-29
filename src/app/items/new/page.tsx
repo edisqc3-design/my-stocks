@@ -140,12 +140,22 @@ function NewItemForm() {
         return;
       }
 
+      const failedPhotos: string[] = [];
       for (const photo of photos) {
         const res = await fetch(photo);
         const blob = await res.blob();
         const path = `${data.id}/${crypto.randomUUID()}.jpg`;
-        await supabase.storage.from("item-photos").upload(path, blob, { contentType: "image/jpeg" });
+        const { error: uploadError } = await supabase.storage
+          .from("item-photos")
+          .upload(path, blob, { contentType: "image/jpeg" });
+        if (uploadError) {
+          failedPhotos.push(uploadError.message);
+          continue;
+        }
         await supabase.from("item_photos").insert({ item_id: data.id, storage_path: path });
+      }
+      if (failedPhotos.length > 0) {
+        alert(`일부 사진 업로드에 실패했습니다:\n${failedPhotos.join("\n")}`);
       }
     } else {
       await db.pendingItems.add({
