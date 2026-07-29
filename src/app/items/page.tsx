@@ -138,7 +138,7 @@ export default function ItemsPage() {
 
   return (
     <div className="space-y-4 pb-20">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-bold">재고현황</h1>
         <div className="flex items-center gap-2">
           <button
@@ -167,42 +167,71 @@ export default function ItemsPage() {
         />
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setLowOnly((v) => !v)}
-          className="rounded-full px-3 py-1 text-xs font-medium"
-          style={{
-            background: lowOnly ? "var(--danger)" : "var(--card)",
-            color: lowOnly ? "#fff" : "var(--ink-soft)",
-            border: "1px solid var(--line)",
-          }}
-        >
-          재고 부족만 보기
-        </button>
-        <select
-          value={locationFilter}
-          onChange={(e) => setLocationFilter(e.target.value)}
-          className="rounded-full border border-[var(--line)] bg-[var(--card)] px-3 py-1 text-xs text-[var(--ink-soft)]"
-        >
-          <option value="">전체 사무실</option>
-          {locations.map((l) => (
-            <option key={l.id} value={l.id}>
-              {l.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="rounded-full border border-[var(--line)] bg-[var(--card)] px-3 py-1 text-xs text-[var(--ink-soft)]"
-        >
-          <option value="">전체 카테고리</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setLowOnly((v) => !v)}
+            className="rounded-full px-3 py-1 text-xs font-medium"
+            style={{
+              background: lowOnly ? "var(--danger)" : "var(--card)",
+              color: lowOnly ? "#fff" : "var(--ink-soft)",
+              border: "1px solid var(--line)",
+            }}
+          >
+            재고 부족만 보기
+          </button>
+          <select
+            value={locationFilter}
+            onChange={(e) => setLocationFilter(e.target.value)}
+            className="rounded-full border border-[var(--line)] bg-[var(--card)] px-3 py-1 text-xs text-[var(--ink-soft)]"
+          >
+            <option value="">전체 사무실</option>
+            {locations.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="rounded-full border border-[var(--line)] bg-[var(--card)] px-3 py-1 text-xs text-[var(--ink-soft)]"
+          >
+            <option value="">전체 카테고리</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {selectMode && selectedIds.size > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-[var(--ink-soft)]">{selectedIds.size}개 선택됨</span>
+            <button
+              onClick={handleEditSelected}
+              disabled={selectedIds.size !== 1}
+              title={selectedIds.size !== 1 ? "수정은 1개 품목만 선택했을 때 가능합니다" : "수정"}
+              className="flex items-center gap-1 rounded-full border border-[var(--line)] px-3 py-1.5 text-sm font-semibold text-[var(--ink)] disabled:opacity-40"
+            >
+              <Pencil size={15} /> 수정
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-1 rounded-full bg-[var(--danger)] px-3 py-1.5 text-sm font-semibold text-white"
+            >
+              <Trash2 size={15} /> 삭제
+            </button>
+            <button
+              onClick={toggleSelectMode}
+              title="선택 취소"
+              className="flex items-center justify-center rounded-full border border-[var(--line)] bg-[var(--card)] p-1.5 text-[var(--ink-soft)]"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="overflow-x-auto rounded-2xl bg-[var(--card)] shadow-sm">
@@ -297,27 +326,6 @@ export default function ItemsPage() {
         </div>
       </div>
 
-      {selectMode && selectedIds.size > 0 && (
-        <div className="fixed inset-x-0 bottom-[64px] z-50 flex items-center justify-between gap-3 border-t border-[var(--line)] bg-[var(--card)] px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(36,31,54,0.12)] lg:bottom-0 lg:left-[240px] lg:pb-3">
-          <span className="text-sm font-medium">{selectedIds.size}개 선택됨</span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleEditSelected}
-              disabled={selectedIds.size !== 1}
-              title={selectedIds.size !== 1 ? "수정은 1개 품목만 선택했을 때 가능합니다" : "수정"}
-              className="flex items-center gap-1 rounded-full border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--ink)] disabled:opacity-40"
-            >
-              <Pencil size={15} /> 수정
-            </button>
-            <button
-              onClick={handleBulkDelete}
-              className="flex items-center gap-1 rounded-full bg-[var(--danger)] px-4 py-2 text-sm font-semibold text-white"
-            >
-              <Trash2 size={15} /> 삭제
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
