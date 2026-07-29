@@ -161,8 +161,12 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
               </select>
               <input
                 type="number"
-                value={editForm.minQuantity}
-                onChange={(e) => setEditForm({ ...editForm, minQuantity: Math.max(0, Number(e.target.value) || 0) })}
+                inputMode="numeric"
+                value={editForm.minQuantity === 0 ? "" : editForm.minQuantity}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setEditForm({ ...editForm, minQuantity: raw === "" ? 0 : Math.max(0, Number(raw) || 0) });
+                }}
                 className="w-24 rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
                 placeholder="최소수량"
               />
