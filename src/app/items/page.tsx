@@ -30,6 +30,7 @@ export default function ItemsPage() {
   const [categories, setCategories] = useState<FilterOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [brokenThumbs, setBrokenThumbs] = useState<Set<string>>(new Set());
+  const [lastInDates, setLastInDates] = useState<Record<string, string>>({});
 
   useEffect(() => {
     supabase.from("locations").select("id, name").order("name").then(({ data }) => setLocations(data ?? []));
@@ -52,6 +53,26 @@ export default function ItemsPage() {
     if (lowOnly) rows = rows.filter((i) => i.quantity <= i.min_quantity);
     setItems(rows);
     setLoading(false);
+
+    // 목록에 표시된 품목들의 "최근 입고일"을 한 번에 조회 (품목별 최신 입고 건만 사용)
+    if (rows.length > 0) {
+      const { data: inMoves } = await supabase
+        .from("stock_movements")
+        .select("item_id, created_at")
+        .in(
+          "item_id",
+          rows.map((i) => i.id)
+        )
+        .eq("type", "in")
+        .order("created_at", { ascending: false });
+      const map: Record<string, string> = {};
+      for (const mv of inMoves ?? []) {
+        if (!map[mv.item_id]) map[mv.item_id] = mv.created_at;
+      }
+      setLastInDates(map);
+    } else {
+      setLastInDates({});
+    }
 
     // 목록을 한 번 조회할 때마다 오프라인 스캔 대비 캐시를 갱신 (바코드가 있는 품목만)
     if (navigator.onLine) {
@@ -149,10 +170,11 @@ export default function ItemsPage() {
           const low = item.quantity <= item.min_quantity;
           const thumb = item.item_photos?.[0]?.storage_path;
           const thumbUrl = thumb ? supabase.storage.from("item-photos").getPublicUrl(thumb).data.publicUrl : null;
+          const lastIn = lastInDates[item.id];
           return (
             <li key={item.id}>
-              <Link href={`/items/${item.id}`} className="flex items-center gap-3 px-4 py-3">
-                <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-[var(--paper)]">
+              <Link href={`/items/${item.id}`} className="flex items-center gap-4 px-4 py-5">
+                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[var(--paper)]">
                   {thumbUrl && !brokenThumbs.has(item.id) ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -163,14 +185,17 @@ export default function ItemsPage() {
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-[var(--ink-soft)]">
-                      <Search size={14} />
+                      <Search size={18} />
                     </div>
                   )}
                 </div>
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   <p className="font-medium">{item.name}</p>
                   <p className="text-xs text-[var(--ink-soft)]">
                     {item.locations?.name ?? "위치 미지정"}
+                  </p>
+                  <p className="text-xs text-[var(--ink-soft)]">
+                    최근입고 {lastIn ? new Date(lastIn).toLocaleDateString("ko-KR") : "-"}
                   </p>
                 </div>
                 <span
