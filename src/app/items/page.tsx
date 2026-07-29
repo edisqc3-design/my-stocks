@@ -82,7 +82,7 @@ export default function ItemsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">품목</h1>
+        <h1 className="text-xl font-bold">재고현황</h1>
         <Link
           href="/items/new"
           className="flex items-center gap-1 rounded-full bg-[var(--primary)] px-3 py-1.5 text-sm font-semibold text-white"
