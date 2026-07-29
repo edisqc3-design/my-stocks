@@ -11,7 +11,9 @@ export async function GET() {
     );
 
     const { error } = await supabase.from("locations").select("id").limit(1);
-    if (error) throw error;
+    // RLS 적용 이후에는 익명 키로 이 쿼리가 permission denied(42501)를 반환하는 게 정상입니다.
+    // 이 라우트의 목적은 API를 호출해 프로젝트를 활성 상태로 유지하는 것뿐이므로, 그 경우도 성공으로 처리합니다.
+    if (error && error.code !== "42501") throw error;
 
     return NextResponse.json({ ok: true, checkedAt: new Date().toISOString() });
   } catch (err) {
