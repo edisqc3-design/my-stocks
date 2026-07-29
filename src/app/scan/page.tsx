@@ -164,10 +164,7 @@ export default function ScanPage() {
         quantity_change: change,
         client_uuid: clientUuid,
       });
-      await supabase
-        .from("items")
-        .update({ quantity: found.quantity + change })
-        .eq("id", found.id);
+      // items.quantity는 DB 트리거(trg_stock_movements_apply)가 자동으로 반영합니다.
     } else {
       await db.pendingMovements.add({
         clientUuid,
