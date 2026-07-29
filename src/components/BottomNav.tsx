@@ -11,6 +11,7 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   ClipboardCheck,
+  BarChart3,
 } from "lucide-react";
 
 const TABS = [
@@ -20,6 +21,7 @@ const TABS = [
   { href: "/scan?mode=out", label: "출고", icon: ArrowUpCircle },
   { href: "/count", label: "재고실사", icon: ClipboardCheck },
   { href: "/items", label: "재고현황", icon: Boxes },
+  { href: "/stats", label: "통계", icon: BarChart3 },
   { href: "/settings", label: "설정", icon: Settings },
 ];
 
