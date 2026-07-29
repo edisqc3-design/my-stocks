@@ -38,7 +38,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   const [categories, setCategories] = useState<Category[]>([]);
   const [moveTarget, setMoveTarget] = useState("");
   const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ name: "", categoryId: "", minQuantity: 0 });
+  const [editForm, setEditForm] = useState({ name: "", categoryId: "", minQuantity: 0, quantity: 0 });
   const [editingMovementId, setEditingMovementId] = useState<string | null>(null);
   const [editMovementValue, setEditMovementValue] = useState(0);
   const [editMovementNote, setEditMovementNote] = useState("");
@@ -56,6 +56,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
         name: detail.name,
         categoryId: detail.category_id ?? "",
         minQuantity: detail.min_quantity,
+        quantity: detail.quantity,
       });
     }
 
@@ -108,6 +109,19 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
         min_quantity: editForm.minQuantity,
       })
       .eq("id", item.id);
+
+    const diff = editForm.quantity - item.quantity;
+    if (diff !== 0) {
+      await supabase.from("stock_movements").insert({
+        item_id: item.id,
+        type: "adjust",
+        quantity_change: diff,
+        note: "현재 수량 직접 수정",
+        client_uuid: crypto.randomUUID(),
+      });
+      // items.quantity는 DB 트리거(trg_stock_movements_apply)가 자동으로 반영합니다.
+    }
+
     setEditing(false);
     load();
   }
@@ -239,12 +253,24 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-2xl bg-[var(--card)] p-4 shadow-sm">
           <p className="text-xs text-[var(--ink-soft)]">현재 수량</p>
-          <p
-            className="text-2xl font-bold"
-            style={{ color: item.quantity <= item.min_quantity ? "var(--danger)" : "var(--ink)" }}
-          >
-            {item.quantity}
-          </p>
+          {editing ? (
+            <input
+              type="number"
+              inputMode="numeric"
+              value={editForm.quantity}
+              onChange={(e) =>
+                setEditForm({ ...editForm, quantity: Math.max(0, Number(e.target.value) || 0) })
+              }
+              className="mt-1 w-full rounded-lg border border-[var(--line)] px-2 py-1 text-lg font-bold"
+            />
+          ) : (
+            <p
+              className="text-2xl font-bold"
+              style={{ color: item.quantity <= item.min_quantity ? "var(--danger)" : "var(--ink)" }}
+            >
+              {item.quantity}
+            </p>
+          )}
         </div>
         <div className="rounded-2xl bg-[var(--card)] p-4 shadow-sm">
           <p className="text-xs text-[var(--ink-soft)]">최소 재고</p>
