@@ -6,7 +6,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { db } from "@/lib/offline-db";
 import { syncAll } from "@/lib/sync";
-import { Camera, X, ArrowLeft } from "lucide-react";
+import { Camera, ImagePlus, X, ArrowLeft } from "lucide-react";
 
 type Location = { id: string; name: string };
 type Category = { id: string; name: string };
@@ -16,7 +16,8 @@ function NewItemForm() {
   const params = useSearchParams();
   const prefillBarcode = params.get("barcode") ?? "";
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const [locations, setLocations] = useState<Location[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
@@ -44,6 +45,7 @@ function NewItemForm() {
       reader.onload = () => setPhotos((prev) => [...prev, reader.result as string]);
       reader.readAsDataURL(file);
     });
+    e.target.value = "";
   }
 
   async function handleSave() {
@@ -127,14 +129,29 @@ function NewItemForm() {
             </div>
           ))}
           <button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => cameraInputRef.current?.click()}
             className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--line)] text-[var(--ink-soft)]"
           >
             <Camera size={20} />
-            <span className="text-[10px]">촬영/첨부</span>
+            <span className="text-[10px]">촬영</span>
+          </button>
+          <button
+            onClick={() => galleryInputRef.current?.click()}
+            className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--line)] text-[var(--ink-soft)]"
+          >
+            <ImagePlus size={20} />
+            <span className="text-[10px]">이미지 첨부</span>
           </button>
           <input
-            ref={fileInputRef}
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handlePhotoSelect}
+          />
+          <input
+            ref={galleryInputRef}
             type="file"
             accept="image/*"
             multiple
