@@ -5,8 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { db } from "@/lib/offline-db";
 import { syncAll } from "@/lib/sync";
-import { connectPrinter, printItemLabel } from "@/lib/label-printer";
-import { Camera, Printer, X } from "lucide-react";
+import { Camera, X } from "lucide-react";
 
 type Location = { id: string; name: string };
 type Category = { id: string; name: string };
@@ -21,7 +20,6 @@ function NewItemForm() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-  const [printAfterSave, setPrintAfterSave] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -99,27 +97,9 @@ function NewItemForm() {
       });
     }
 
-    // 라벨 출력은 블루투스로 프린터와 직접 통신하므로 인터넷 연결 여부와 무관하게 동작합니다.
-    if (printAfterSave) {
-      try {
-        await printItemLabel({ name: form.name, barcodeValue: form.barcode });
-      } catch {
-        alert("라벨 출력에 실패했습니다. 설정에서 프린터 연결을 확인해주세요.");
-      }
-    }
-
     setSaving(false);
     syncAll();
     router.push("/items");
-  }
-
-  async function handleConnectAndPrint() {
-    try {
-      await connectPrinter();
-      setPrintAfterSave(true);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "프린터 연결에 실패했습니다.");
-    }
   }
 
   return (
@@ -227,14 +207,6 @@ function NewItemForm() {
           />
         </Field>
       </div>
-
-      <button
-        onClick={handleConnectAndPrint}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--primary)] py-3 font-medium text-[var(--primary)]"
-      >
-        <Printer size={18} />
-        {printAfterSave ? "프린터 연결됨 · 저장 시 자동 출력" : "라벨 프린터 연결"}
-      </button>
 
       <button
         disabled={saving}
