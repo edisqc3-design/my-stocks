@@ -169,10 +169,16 @@ function NewItemForm() {
   }
 
   const photoBoxClass = {
-    sm: "h-20 w-20",
-    md: "h-28 w-28",
-    lg: "h-36 w-36",
+    sm: "h-24 w-24",
+    md: "h-40 w-40",
+    lg: "h-56 w-56",
   }[photoSize];
+  const photoDeleteBtnClass = {
+    sm: "p-0.5",
+    md: "p-1",
+    lg: "p-1.5",
+  }[photoSize];
+  const photoDeleteIconSize = { sm: 12, md: 16, lg: 20 }[photoSize];
 
   return (
     <div className="space-y-5">
@@ -224,9 +230,9 @@ function NewItemForm() {
               <img src={p} alt="" className="h-full w-full object-cover" />
               <button
                 onClick={() => setPhotos((prev) => prev.filter((_, idx) => idx !== i))}
-                className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
+                className={`absolute right-1 top-1 rounded-full bg-black/60 text-white ${photoDeleteBtnClass}`}
               >
-                <X size={12} />
+                <X size={photoDeleteIconSize} />
               </button>
             </div>
           ))}
