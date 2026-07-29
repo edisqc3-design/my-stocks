@@ -125,6 +125,8 @@ export default function SettingsPage() {
     setBusy("sync");
     const result = await syncAll();
     setBusy(null);
+    // alert()는 화면이 그려지기 전에 뜰 수 있어, 한 박자 늦춰서 버튼 상태가 먼저 반영되게 함
+    await new Promise((resolve) => setTimeout(resolve, 0));
     if (result.reason === "offline") {
       alert("오프라인 상태입니다. 인터넷 연결 후 다시 시도해주세요.");
     } else if (result.reason === "error") {
