@@ -12,9 +12,11 @@ type LowStockItem = {
   quantity: number;
   min_quantity: number;
   location_id: string | null;
+  category_id: string | null;
   locations: { name: string } | null;
 };
 type LocationOption = { id: string; name: string };
+type CategoryOption = { id: string; name: string };
 
 // 읽음 상태는 품목별 (quantity, min_quantity) 스냅샷과 함께 저장합니다.
 // 저장된 스냅샷과 현재 값이 다르면(재고가 더 줄었거나 새로 부족해진 경우) 다시 "안읽음"으로 취급합니다.
@@ -23,6 +25,7 @@ type ReadMap = Record<string, ReadSnapshot>;
 
 const READ_STORAGE_KEY = "stock-notif-read-v1";
 const LOCATION_FILTER_STORAGE_KEY = "stock-notif-location-filter-v1";
+const CATEGORY_FILTER_STORAGE_KEY = "stock-notif-category-filter-v1";
 
 function loadReadMap(): ReadMap {
   if (typeof window === "undefined") return {};
@@ -47,7 +50,9 @@ function saveReadMap(map: ReadMap) {
 export default function NotificationBell() {
   const [items, setItems] = useState<LowStockItem[]>([]);
   const [locations, setLocations] = useState<LocationOption[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [locationFilter, setLocationFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [readMap, setReadMap] = useState<ReadMap>({});
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -58,21 +63,25 @@ export default function NotificationBell() {
     try {
       const savedFilter = window.localStorage.getItem(LOCATION_FILTER_STORAGE_KEY);
       if (savedFilter) setLocationFilter(savedFilter);
+      const savedCategoryFilter = window.localStorage.getItem(CATEGORY_FILTER_STORAGE_KEY);
+      if (savedCategoryFilter) setCategoryFilter(savedCategoryFilter);
     } catch {
       // 무시
     }
   }, []);
 
   const load = useCallback(async () => {
-    const [{ data: itemData }, { data: locData }] = await Promise.all([
+    const [{ data: itemData }, { data: locData }, { data: catData }] = await Promise.all([
       supabase
         .from("items")
-        .select("id, name, quantity, min_quantity, location_id, locations(name)")
+        .select("id, name, quantity, min_quantity, location_id, category_id, locations(name)")
         .order("quantity", { ascending: true }),
       supabase.from("locations").select("id, name").order("name"),
+      supabase.from("categories").select("id, name").order("name"),
     ]);
     setItems((itemData ?? []).filter((i) => i.quantity <= i.min_quantity) as unknown as LowStockItem[]);
     setLocations(locData ?? []);
+    setCategories(catData ?? []);
   }, []);
 
   useEffect(() => {
@@ -127,10 +136,22 @@ export default function NotificationBell() {
     }
   }, []);
 
-  // 위치 필터가 적용된 목록(패널에 표시). 배지 카운트는 필터와 무관하게 전체 기준으로 계산합니다.
+  const handleCategoryFilterChange = useCallback((value: string) => {
+    setCategoryFilter(value);
+    try {
+      window.localStorage.setItem(CATEGORY_FILTER_STORAGE_KEY, value);
+    } catch {
+      // 무시
+    }
+  }, []);
+
+  // 위치/카테고리 필터가 적용된 목록(패널에 표시). 배지 카운트는 필터와 무관하게 전체 기준으로 계산합니다.
   const filteredItems = useMemo(
-    () => (locationFilter ? items.filter((i) => i.location_id === locationFilter) : items),
-    [items, locationFilter]
+    () =>
+      items
+        .filter((i) => !locationFilter || i.location_id === locationFilter)
+        .filter((i) => !categoryFilter || i.category_id === categoryFilter),
+    [items, locationFilter, categoryFilter]
   );
 
   const markAllVisibleRead = useCallback(() => {
@@ -181,24 +202,38 @@ export default function NotificationBell() {
             </button>
           </div>
 
-          <div className="flex items-center gap-2 border-b border-[var(--line)] px-4 py-2">
-            <select
-              value={locationFilter}
-              onChange={(e) => handleLocationFilterChange(e.target.value)}
-              className="flex-1 rounded-full border border-[var(--line)] bg-[var(--card)] px-3 py-1 text-xs text-[var(--ink-soft)]"
-            >
-              <option value="">전체 사무실</option>
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-col gap-2 border-b border-[var(--line)] px-4 py-2">
+            <div className="flex items-center gap-2">
+              <select
+                value={locationFilter}
+                onChange={(e) => handleLocationFilterChange(e.target.value)}
+                className="flex-1 rounded-full border border-[var(--line)] bg-[var(--card)] px-3 py-1 text-xs text-[var(--ink-soft)]"
+              >
+                <option value="">전체 사무실</option>
+                {locations.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={categoryFilter}
+                onChange={(e) => handleCategoryFilterChange(e.target.value)}
+                className="flex-1 rounded-full border border-[var(--line)] bg-[var(--card)] px-3 py-1 text-xs text-[var(--ink-soft)]"
+              >
+                <option value="">전체 카테고리</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button
               onClick={markAllVisibleRead}
               disabled={!hasUnreadInView}
               aria-label="현재 목록 모두 읽음 처리"
-              className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--line)] px-3 py-1 text-xs font-medium text-[var(--ink-soft)] disabled:opacity-40"
+              className="flex shrink-0 items-center justify-center gap-1 self-end rounded-full border border-[var(--line)] px-3 py-1 text-xs font-medium text-[var(--ink-soft)] disabled:opacity-40"
             >
               <Check size={12} />
               모두 읽음
