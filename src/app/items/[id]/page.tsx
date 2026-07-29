@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState, use } from "react";
+import { useCallback, useEffect, useRef, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Trash2, ArrowLeft, Repeat, Pencil, Check, X } from "lucide-react";
+import { Trash2, ArrowLeft, Repeat, Pencil, Check, X, ImagePlus, ImageOff } from "lucide-react";
 
 type ItemDetail = {
   id: string;
@@ -42,6 +42,9 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   const [editingMovementId, setEditingMovementId] = useState<string | null>(null);
   const [editMovementValue, setEditMovementValue] = useState(0);
   const [editMovementNote, setEditMovementNote] = useState("");
+  const [brokenPhotoIds, setBrokenPhotoIds] = useState<Set<string>>(new Set());
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -83,6 +86,54 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
 
   function photoUrl(path: string) {
     return supabase.storage.from("item-photos").getPublicUrl(path).data.publicUrl;
+  }
+
+  // 수정 모드에서 "다른 이미지로 불러오기" 버튼 클릭 시 파일 선택창을 연다.
+  function handlePhotoButtonClick() {
+    photoInputRef.current?.click();
+  }
+
+  // 선택한 이미지를 새로 업로드하고, 기존 사진들은 모두 교체한다.
+  async function handlePhotoReplace(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (!item || files.length === 0) return;
+
+    setPhotoUploading(true);
+    try {
+      // 기존 사진 삭제 (스토리지 + 레코드)
+      for (const p of photos) {
+        await supabase.storage.from("item-photos").remove([p.storage_path]);
+        await supabase.from("item_photos").delete().eq("id", p.id);
+      }
+
+      // 새 사진 업로드
+      for (const file of files) {
+        const ext = file.name.split(".").pop() || "jpg";
+        const path = `${item.id}/${crypto.randomUUID()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("item-photos")
+          .upload(path, file, { contentType: file.type || "image/jpeg" });
+        if (uploadError) {
+          alert(`이미지 업로드 실패: ${uploadError.message}`);
+          continue;
+        }
+        await supabase.from("item_photos").insert({ item_id: item.id, storage_path: path });
+      }
+
+      setBrokenPhotoIds(new Set());
+      await load();
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
+
+  // 사진 한 장 삭제
+  async function handleDeletePhoto(p: Photo) {
+    if (!confirm("이 사진을 삭제하시겠습니까?")) return;
+    await supabase.storage.from("item-photos").remove([p.storage_path]);
+    await supabase.from("item_photos").delete().eq("id", p.id);
+    await load();
   }
 
   async function handleMove() {
@@ -170,17 +221,60 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
         <ArrowLeft size={16} /> 뒤로
       </button>
 
-      {photos.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto">
-          {photos.map((p) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={p.id}
-              src={photoUrl(p.storage_path)}
-              alt={item.name}
-              className="h-32 w-32 shrink-0 rounded-xl object-cover"
+      {(photos.length > 0 || editing) && (
+        <div className="space-y-2">
+          <div className="flex gap-2 overflow-x-auto">
+            {photos.map((p) => {
+              const broken = brokenPhotoIds.has(p.id);
+              return (
+                <div key={p.id} className="relative h-32 w-32 shrink-0 overflow-hidden rounded-xl bg-[var(--paper)]">
+                  {broken ? (
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-[var(--ink-soft)]">
+                      <ImageOff size={20} />
+                      <span className="text-[10px]">이미지를 불러올 수 없음</span>
+                    </div>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={photoUrl(p.storage_path)}
+                      alt={item.name}
+                      className="h-full w-full object-cover"
+                      onError={() => setBrokenPhotoIds((prev) => new Set(prev).add(p.id))}
+                    />
+                  )}
+                  {editing && (
+                    <button
+                      onClick={() => handleDeletePhoto(p)}
+                      className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white"
+                      aria-label="사진 삭제"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            {editing && (
+              <button
+                onClick={handlePhotoButtonClick}
+                disabled={photoUploading}
+                className="flex h-32 w-32 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--line)] text-[var(--ink-soft)] disabled:opacity-60"
+              >
+                <ImagePlus size={20} />
+                <span className="text-xs">{photoUploading ? "업로드 중…" : photos.length > 0 ? "다른 이미지로 변경" : "이미지 추가"}</span>
+              </button>
+            )}
+          </div>
+          {editing && (
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handlePhotoReplace}
             />
-          ))}
+          )}
         </div>
       )}
 
