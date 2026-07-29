@@ -121,6 +121,20 @@ export default function SettingsPage() {
     load();
   }
 
+  async function handleSyncNow() {
+    setBusy("sync");
+    const result = await syncAll();
+    setBusy(null);
+    if (result.reason === "offline") {
+      alert("오프라인 상태입니다. 인터넷 연결 후 다시 시도해주세요.");
+    } else if (result.reason === "error") {
+      alert("동기화 중 오류가 발생했습니다.");
+    } else {
+      alert("동기화가 완료되었습니다.");
+    }
+    load();
+  }
+
   async function handleBackup() {
     setBusy("backup");
     try {
@@ -352,10 +366,15 @@ export default function SettingsPage() {
         </div>
         <div className="p-5">
           <button
-            onClick={() => syncAll()}
-            className="group flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--line)] py-3 text-sm font-medium text-[var(--ink)] transition hover:border-[var(--primary)]/40 hover:bg-[var(--paper)]"
+            disabled={busy === "sync"}
+            onClick={handleSyncNow}
+            className="group flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-[var(--line)] py-3 text-sm font-medium text-[var(--ink)] transition hover:border-[var(--primary)]/40 hover:bg-[var(--paper)] disabled:cursor-default disabled:opacity-60"
           >
-            <RefreshCw size={16} className="transition-transform duration-500 group-hover:rotate-180" /> 지금 동기화
+            <RefreshCw
+              size={16}
+              className={`transition-transform duration-500 ${busy === "sync" ? "animate-spin" : "group-hover:rotate-180"}`}
+            />
+            {busy === "sync" ? "동기화 중…" : "지금 동기화"}
           </button>
         </div>
       </section>
