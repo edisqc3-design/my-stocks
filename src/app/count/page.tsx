@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode, Html5QrcodeScannerState } from "html5-qrcode";
 import { supabase } from "@/lib/supabase";
-import { ClipboardCheck, Check, X } from "lucide-react";
+import { ClipboardCheck, Check, X, Search } from "lucide-react";
 
 type Location = { id: string; name: string };
 type CountEntry = { itemId: string; name: string; barcode: string; systemQuantity: number; countedQuantity: number };
+type CountSearchResult = { id: string; name: string; barcode: string; quantity: number };
 
 const SCANNER_ID = "count-scan-reader";
 
@@ -17,13 +18,17 @@ export default function StockCountPage() {
   const [countId, setCountId] = useState<string | null>(null);
   const [entries, setEntries] = useState<CountEntry[]>([]);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const [manualMode, setManualMode] = useState(false);
+  const [manualQuery, setManualQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<CountSearchResult[]>([]);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     supabase.from("locations").select("id, name").order("name").then(({ data }) => setLocations(data ?? []));
   }, []);
 
   useEffect(() => {
-    if (phase !== "scanning") return;
+    if (phase !== "scanning" || manualMode) return;
     let cancelled = false;
     const scanner = new Html5Qrcode(SCANNER_ID);
     scannerRef.current = scanner;
@@ -63,7 +68,7 @@ export default function StockCountPage() {
       shutdown();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+  }, [phase, manualMode]);
 
   async function startCount() {
     const { data, error } = await supabase
@@ -77,6 +82,9 @@ export default function StockCountPage() {
     }
     setCountId(data.id);
     setEntries([]);
+    setManualMode(false);
+    setManualQuery("");
+    setSearchResults([]);
     setPhase("scanning");
   }
 
@@ -97,6 +105,38 @@ export default function StockCountPage() {
         { itemId: item.id, name: item.name, barcode: item.barcode, systemQuantity: item.quantity, countedQuantity: 1 },
       ];
     });
+  }
+
+  function handleManualQueryChange(value: string) {
+    setManualQuery(value);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+
+    if (!value.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    searchTimer.current = setTimeout(async () => {
+      let q = supabase.from("items").select("id, name, barcode, quantity");
+      q = locationId ? q.eq("location_id", locationId) : q;
+      const { data } = await q.ilike("name", `%${value.trim()}%`).limit(8);
+      setSearchResults(data ?? []);
+    }, 300);
+  }
+
+  function addManualEntry(item: CountSearchResult) {
+    setEntries((prev) => {
+      const existing = prev.find((e) => e.itemId === item.id);
+      if (existing) {
+        return prev.map((e) => (e.itemId === item.id ? { ...e, countedQuantity: e.countedQuantity + 1 } : e));
+      }
+      return [
+        ...prev,
+        { itemId: item.id, name: item.name, barcode: item.barcode, systemQuantity: item.quantity, countedQuantity: 1 },
+      ];
+    });
+    setManualQuery("");
+    setSearchResults([]);
   }
 
   function adjustCount(itemId: string, delta: number) {
@@ -183,9 +223,67 @@ export default function StockCountPage() {
           <span className="text-sm text-[var(--ink-soft)]">스캔 {entries.length}개 품목</span>
         </div>
 
-        <div className="overflow-hidden rounded-2xl bg-black">
-          <div id={SCANNER_ID} className="mx-auto aspect-square w-full max-w-xs" />
+        <div className="flex gap-2">
+          <button
+            onClick={() => setManualMode(false)}
+            className="flex-1 rounded-xl py-2 text-sm font-semibold"
+            style={{
+              background: !manualMode ? "var(--primary)" : "var(--card)",
+              color: !manualMode ? "#fff" : "var(--ink-soft)",
+              border: !manualMode ? "none" : "1px solid var(--line)",
+            }}
+          >
+            카메라로 스캔
+          </button>
+          <button
+            onClick={() => setManualMode(true)}
+            className="flex-1 rounded-xl py-2 text-sm font-semibold"
+            style={{
+              background: manualMode ? "var(--primary)" : "var(--card)",
+              color: manualMode ? "#fff" : "var(--ink-soft)",
+              border: manualMode ? "none" : "1px solid var(--line)",
+            }}
+          >
+            수동 입력
+          </button>
         </div>
+
+        {manualMode ? (
+          <div className="space-y-2">
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-soft)]" />
+              <input
+                value={manualQuery}
+                onChange={(e) => handleManualQueryChange(e.target.value)}
+                placeholder="품목명으로 검색"
+                className="w-full rounded-xl border border-[var(--line)] bg-[var(--card)] py-2.5 pl-9 pr-3 text-sm"
+                autoFocus
+              />
+            </div>
+            {searchResults.length > 0 && (
+              <ul className="divide-y divide-[var(--line)] rounded-2xl bg-[var(--card)] shadow-sm">
+                {searchResults.map((r) => (
+                  <li key={r.id}>
+                    <button
+                      onClick={() => addManualEntry(r)}
+                      className="flex w-full items-center justify-between px-4 py-3 text-left"
+                    >
+                      <span className="text-sm font-medium">{r.name}</span>
+                      <span className="text-sm text-[var(--ink-soft)]">현재 {r.quantity}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {manualQuery.trim() && searchResults.length === 0 && (
+              <p className="py-3 text-center text-sm text-[var(--ink-soft)]">검색 결과가 없습니다.</p>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-2xl bg-black">
+            <div id={SCANNER_ID} className="mx-auto aspect-square w-full max-w-xs" />
+          </div>
+        )}
 
         <ul className="divide-y divide-[var(--line)] rounded-2xl bg-[var(--card)] shadow-sm">
           {entries.length === 0 && (
