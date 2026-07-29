@@ -193,16 +193,26 @@ function NewItemForm() {
         <Field label="초기 수량">
           <input
             type="number"
-            value={form.quantity}
-            onChange={(e) => setForm({ ...form, quantity: Math.max(0, Number(e.target.value) || 0) })}
+            inputMode="numeric"
+            value={form.quantity === 0 ? "" : form.quantity}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setForm({ ...form, quantity: raw === "" ? 0 : Math.max(0, Number(raw) || 0) });
+            }}
+            placeholder="0"
             className="input"
           />
         </Field>
         <Field label="최소 재고 수량">
           <input
             type="number"
-            value={form.minQuantity}
-            onChange={(e) => setForm({ ...form, minQuantity: Math.max(0, Number(e.target.value) || 0) })}
+            inputMode="numeric"
+            value={form.minQuantity === 0 ? "" : form.minQuantity}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setForm({ ...form, minQuantity: raw === "" ? 0 : Math.max(0, Number(raw) || 0) });
+            }}
+            placeholder="0"
             className="input"
           />
         </Field>
