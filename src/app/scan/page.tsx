@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { db } from "@/lib/offline-db";
 import { syncAll } from "@/lib/sync";
 import SyncStatusBadge from "@/components/SyncStatusBadge";
-import { ArrowDownCircle, ArrowUpCircle, X, ClipboardCheck } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, X, ClipboardCheck, Search } from "lucide-react";
 
 type ScannedItem = {
   id: string;
@@ -17,6 +17,16 @@ type ScannedItem = {
   barcode: string;
   locationName: string | null;
   thumbnailUrl: string | null;
+};
+
+type SearchResult = {
+  id: string;
+  name: string;
+  quantity: number;
+  location_id: string | null;
+  barcode: string;
+  locations: { name: string } | null;
+  item_photos: { storage_path: string }[];
 };
 
 const SCANNER_ID = "scan-reader";
@@ -33,8 +43,14 @@ function ScanForm() {
   const [notFoundBarcode, setNotFoundBarcode] = useState<string | null>(null);
   const [amount, setAmount] = useState(1);
   const [busy, setBusy] = useState(false);
+  const [manualMode, setManualMode] = useState(false);
+  const [manualQuery, setManualQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (manualMode) return; // 수동 입력 모드에서는 카메라를 켜지 않음
+
     let cancelled = false;
     const scanner = new Html5Qrcode(SCANNER_ID);
     scannerRef.current = scanner;
@@ -76,7 +92,7 @@ function ScanForm() {
       shutdown();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [manualMode]);
 
   async function handleDecoded(value: string) {
     if (found || notFoundBarcode) return; // 이미 처리 중인 스캔 결과 있으면 무시
@@ -148,10 +164,64 @@ function ScanForm() {
     }
   }
 
+  function handleManualQueryChange(value: string) {
+    setManualQuery(value);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+
+    if (!value.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    searchTimer.current = setTimeout(async () => {
+      if (navigator.onLine) {
+        const { data } = await supabase
+          .from("items")
+          .select("id, name, quantity, location_id, barcode, locations(name), item_photos(storage_path)")
+          .ilike("name", `%${value.trim()}%`)
+          .limit(8);
+        setSearchResults((data ?? []) as unknown as SearchResult[]);
+      } else {
+        // 오프라인: 캐시된 품목 중에서만 이름으로 검색
+        const cached = await db.cachedItems.toArray();
+        const matched = cached.filter((c) => c.name.includes(value.trim())).slice(0, 8);
+        setSearchResults(
+          matched.map((c) => ({
+            id: c.id,
+            name: c.name,
+            quantity: c.quantity,
+            location_id: c.locationId,
+            barcode: c.barcode,
+            locations: null,
+            item_photos: [],
+          }))
+        );
+      }
+    }, 300);
+  }
+
+  function selectManualResult(d: SearchResult) {
+    const thumb = d.item_photos?.[0]?.storage_path;
+    const thumbnailUrl = thumb ? supabase.storage.from("item-photos").getPublicUrl(thumb).data.publicUrl : null;
+    setFound({
+      id: d.id,
+      name: d.name,
+      quantity: d.quantity,
+      location_id: d.location_id,
+      barcode: d.barcode,
+      locationName: d.locations?.name ?? null,
+      thumbnailUrl,
+    });
+    setManualQuery("");
+    setSearchResults([]);
+  }
+
   function reset() {
     setFound(null);
     setNotFoundBarcode(null);
     setAmount(1);
+    setManualQuery("");
+    setSearchResults([]);
     scannerRef.current?.resume();
   }
 
@@ -202,19 +272,82 @@ function ScanForm() {
         </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-2xl bg-black">
-        <div id={SCANNER_ID} className="mx-auto aspect-square w-full max-w-sm" />
-        {scanning && (
-          <div className="pointer-events-none absolute inset-x-8 top-1/2 h-0.5 bg-[var(--signal)] scanline" />
-        )}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setManualMode(false)}
+          className="flex-1 rounded-xl py-2 text-sm font-semibold"
+          style={{
+            background: !manualMode ? "var(--primary)" : "var(--card)",
+            color: !manualMode ? "#fff" : "var(--ink-soft)",
+            border: !manualMode ? "none" : "1px solid var(--line)",
+          }}
+        >
+          카메라로 스캔
+        </button>
+        <button
+          onClick={() => setManualMode(true)}
+          className="flex-1 rounded-xl py-2 text-sm font-semibold"
+          style={{
+            background: manualMode ? "var(--primary)" : "var(--card)",
+            color: manualMode ? "#fff" : "var(--ink-soft)",
+            border: manualMode ? "none" : "1px solid var(--line)",
+          }}
+        >
+          수동 입력
+        </button>
       </div>
-      <p className="text-center text-sm text-[var(--ink-soft)]">
-        {mode === "in"
-          ? "입고할 품목의 바코드 또는 QR코드를 카메라에 비춰주세요"
-          : mode === "out"
-          ? "출고할 품목의 바코드 또는 QR코드를 카메라에 비춰주세요"
-          : "바코드 또는 QR코드를 카메라에 비춰주세요"}
-      </p>
+
+      {manualMode ? (
+        <div className="space-y-2">
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-soft)]" />
+            <input
+              value={manualQuery}
+              onChange={(e) => handleManualQueryChange(e.target.value)}
+              placeholder="품목명으로 검색"
+              className="w-full rounded-xl border border-[var(--line)] bg-[var(--card)] py-2.5 pl-9 pr-3 text-sm"
+              autoFocus
+            />
+          </div>
+          {searchResults.length > 0 && (
+            <ul className="divide-y divide-[var(--line)] rounded-2xl bg-[var(--card)] shadow-sm">
+              {searchResults.map((r) => (
+                <li key={r.id}>
+                  <button
+                    onClick={() => selectManualResult(r)}
+                    className="flex w-full items-center justify-between px-4 py-3 text-left"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{r.name}</p>
+                      <p className="text-xs text-[var(--ink-soft)]">{r.locations?.name ?? "위치 미지정"}</p>
+                    </div>
+                    <span className="text-sm text-[var(--ink-soft)]">현재 {r.quantity}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {manualQuery.trim() && searchResults.length === 0 && (
+            <p className="py-3 text-center text-sm text-[var(--ink-soft)]">검색 결과가 없습니다.</p>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="relative overflow-hidden rounded-2xl bg-black">
+            <div id={SCANNER_ID} className="mx-auto aspect-square w-full max-w-sm" />
+            {scanning && (
+              <div className="pointer-events-none absolute inset-x-8 top-1/2 h-0.5 bg-[var(--signal)] scanline" />
+            )}
+          </div>
+          <p className="text-center text-sm text-[var(--ink-soft)]">
+            {mode === "in"
+              ? "입고할 품목의 바코드 또는 QR코드를 카메라에 비춰주세요"
+              : mode === "out"
+              ? "출고할 품목의 바코드 또는 QR코드를 카메라에 비춰주세요"
+              : "바코드 또는 QR코드를 카메라에 비춰주세요"}
+          </p>
+        </>
+      )}
 
       {/* 등록된 품목 스캔 시 하단 시트 */}
       {found && (
