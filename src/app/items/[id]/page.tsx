@@ -192,31 +192,18 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
               onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
               className="w-full rounded-xl border border-[var(--line)] px-3 py-2 text-lg font-bold"
             />
-            <div className="flex gap-2">
-              <select
-                value={editForm.categoryId}
-                onChange={(e) => setEditForm({ ...editForm, categoryId: e.target.value })}
-                className="flex-1 rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
-              >
-                <option value="">카테고리 선택 안함</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                inputMode="numeric"
-                value={editForm.minQuantity === 0 ? "" : editForm.minQuantity}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  setEditForm({ ...editForm, minQuantity: raw === "" ? 0 : Math.max(0, Number(raw) || 0) });
-                }}
-                className="w-24 rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
-                placeholder="최소수량"
-              />
-            </div>
+            <select
+              value={editForm.categoryId}
+              onChange={(e) => setEditForm({ ...editForm, categoryId: e.target.value })}
+              className="w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
+            >
+              <option value="">카테고리 선택 안함</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
           </div>
         ) : (
           <div>
@@ -274,7 +261,19 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
         </div>
         <div className="rounded-2xl bg-[var(--card)] p-4 shadow-sm">
           <p className="text-xs text-[var(--ink-soft)]">최소 재고</p>
-          <p className="text-2xl font-bold">{item.min_quantity}</p>
+          {editing ? (
+            <input
+              type="number"
+              inputMode="numeric"
+              value={editForm.minQuantity}
+              onChange={(e) =>
+                setEditForm({ ...editForm, minQuantity: Math.max(0, Number(e.target.value) || 0) })
+              }
+              className="mt-1 w-full rounded-lg border border-[var(--line)] px-2 py-1 text-lg font-bold"
+            />
+          ) : (
+            <p className="text-2xl font-bold">{item.min_quantity}</p>
+          )}
         </div>
       </div>
 
