@@ -164,12 +164,12 @@ export default function ItemsPage() {
       <div className="overflow-x-auto rounded-2xl bg-[var(--card)] shadow-sm">
         <div className="min-w-[680px]">
           {/* 열 헤더 */}
-          <div className="grid grid-cols-[110px_1fr_1fr_1fr_1fr] divide-x divide-[var(--line)] border-b border-[var(--line)] text-xs font-medium text-[var(--ink-soft)]">
-            <div className="truncate px-3 py-2 text-center">품목 사진</div>
-            <div className="truncate px-3 py-2 text-center">품목명</div>
-            <div className="truncate px-3 py-2 text-center">사무실(위치)</div>
-            <div className="truncate px-3 py-2 text-center">최근입고일</div>
-            <div className="truncate px-3 py-2 text-center">현재수량</div>
+          <div className="grid grid-cols-[110px_1fr_1fr_1fr_1fr] divide-x divide-[var(--line)] border-b border-[var(--line)] text-sm font-bold text-[var(--ink)]">
+            <div className="truncate px-3 py-3 text-center">품목 사진</div>
+            <div className="truncate px-3 py-3 text-center">품목명</div>
+            <div className="truncate px-3 py-3 text-center">사무실(위치)</div>
+            <div className="truncate px-3 py-3 text-center">최근입고일</div>
+            <div className="truncate px-3 py-3 text-center">현재수량</div>
           </div>
 
           <ul className="divide-y divide-[var(--line)]">
