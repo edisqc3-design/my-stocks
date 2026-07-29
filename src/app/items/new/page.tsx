@@ -18,10 +18,15 @@ function NewItemForm() {
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [photoSize, setPhotoSize] = useState<"sm" | "md" | "lg">("md");
 
   const [form, setForm] = useState({
     name: "",
@@ -46,6 +51,64 @@ function NewItemForm() {
       reader.readAsDataURL(file);
     });
     e.target.value = "";
+  }
+
+  function stopCameraStream() {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+  }
+
+  async function openCamera() {
+    setCameraError(null);
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      // 카메라 API를 지원하지 않는 환경 → 파일 선택창으로 대체
+      cameraInputRef.current?.click();
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      setCameraOpen(true);
+    } catch (err) {
+      // 카메라 접근 거부/실패 → 파일 선택창으로 대체
+      console.error("카메라 접근 실패:", err);
+      setCameraError("카메라에 접근할 수 없습니다. 파일 선택으로 대신 진행해주세요.");
+      cameraInputRef.current?.click();
+    }
+  }
+
+  useEffect(() => {
+    if (cameraOpen && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [cameraOpen]);
+
+  useEffect(() => {
+    return () => stopCameraStream();
+  }, []);
+
+  function closeCamera() {
+    stopCameraStream();
+    setCameraOpen(false);
+  }
+
+  function capturePhoto() {
+    const video = videoRef.current;
+    if (!video || video.videoWidth === 0) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+    setPhotos((prev) => [...prev, dataUrl]);
   }
 
   async function handleSave() {
@@ -105,6 +168,13 @@ function NewItemForm() {
     router.push("/items");
   }
 
+  const photoBoxClass = {
+    sm: "h-20 w-20",
+    md: "h-28 w-28",
+    lg: "h-36 w-36",
+  }[photoSize];
+  const photoIconSize = { sm: 20, md: 26, lg: 32 }[photoSize];
+
   return (
     <div className="space-y-5">
       <Link href="/items" className="flex items-center gap-1 text-sm text-[var(--ink-soft)]">
@@ -114,10 +184,27 @@ function NewItemForm() {
 
       {/* 사진 */}
       <div>
-        <label className="mb-2 block text-sm font-medium text-[var(--ink-soft)]">사진</label>
+        <div className="mb-2 flex items-center justify-between">
+          <label className="block text-sm font-medium text-[var(--ink-soft)]">사진</label>
+          <div className="flex items-center gap-1 rounded-lg border border-[var(--line)] p-0.5">
+            {(["sm", "md", "lg"] as const).map((size) => (
+              <button
+                key={size}
+                onClick={() => setPhotoSize(size)}
+                className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                  photoSize === size
+                    ? "bg-[var(--primary)] text-white"
+                    : "text-[var(--ink-soft)]"
+                }`}
+              >
+                {size === "sm" ? "소" : size === "md" ? "중" : "대"}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex flex-wrap gap-2">
           {photos.map((p, i) => (
-            <div key={i} className="relative h-20 w-20 overflow-hidden rounded-xl border border-[var(--line)]">
+            <div key={i} className={`relative ${photoBoxClass} overflow-hidden rounded-xl border border-[var(--line)]`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={p} alt="" className="h-full w-full object-cover" />
               <button
@@ -129,17 +216,17 @@ function NewItemForm() {
             </div>
           ))}
           <button
-            onClick={() => cameraInputRef.current?.click()}
-            className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--line)] text-[var(--ink-soft)]"
+            onClick={openCamera}
+            className={`flex ${photoBoxClass} flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--line)] text-[var(--ink-soft)]`}
           >
-            <Camera size={20} />
+            <Camera size={photoIconSize} />
             <span className="text-[10px]">촬영</span>
           </button>
           <button
             onClick={() => galleryInputRef.current?.click()}
-            className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--line)] text-[var(--ink-soft)]"
+            className={`flex ${photoBoxClass} flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--line)] text-[var(--ink-soft)]`}
           >
-            <ImagePlus size={20} />
+            <ImagePlus size={photoIconSize} />
             <span className="text-[10px]">이미지 첨부</span>
           </button>
           <input
@@ -159,7 +246,38 @@ function NewItemForm() {
             onChange={handlePhotoSelect}
           />
         </div>
+        {cameraError && (
+          <p className="mt-1.5 text-xs text-red-500">{cameraError}</p>
+        )}
       </div>
+
+      {cameraOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 p-4">
+          <div className="relative w-full max-w-md overflow-hidden rounded-xl bg-black">
+            <video ref={videoRef} playsInline muted className="w-full" />
+          </div>
+          <div className="mt-4 flex items-center gap-4">
+            <button
+              onClick={closeCamera}
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white"
+            >
+              <X size={20} />
+            </button>
+            <button
+              onClick={capturePhoto}
+              className="h-16 w-16 rounded-full border-4 border-white/70 bg-white"
+              aria-label="촬영"
+            />
+            <button
+              onClick={closeCamera}
+              className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white"
+            >
+              완료
+            </button>
+          </div>
+          <p className="mt-3 text-xs text-white/60">촬영 버튼을 누르면 사진이 목록에 추가됩니다. 여러 장 연속 촬영 가능</p>
+        </div>
+      )}
 
       <Field label="품목명">
         <input
