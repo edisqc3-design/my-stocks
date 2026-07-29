@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f4f1fb;        /* 연보라 배경 (재고왕 참고) */
+  --ink: #241f36;
+  --ink-soft: #6b6480;
+  --line: #e4defa;
+  --card: #ffffff;
+  --primary: #7c5cf0;      /* 메인 퍼플 */
+  --primary-soft: #ece6fd;
+  --signal: #7c5cf0;
+  --ok: #2f9e6e;           /* 입고/정상 */
+  --warn: #e0a63b;         /* 재고 임박 */
+  --danger: #e15b5b;       /* 출고/부족 */
+  --navy: #241f36;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-signal: var(--signal);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-navy: var(--navy);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(0); opacity: 0.9; }
+  50% { opacity: 0.4; }
+  100% { transform: translateY(100%); opacity: 0.9; }
+}
+.scanline {
+  animation: scanline 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scanline { animation: none; }
+}
+
+/* PC(넓은 화면)에서는 좌측 사이드바 내비게이션으로 전환 */
+@media (min-width: 1024px) {
+  .app-shell {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+  }
+  .bottom-nav-mobile { display: none; }
+  .side-nav-desktop { display: flex; }
+}
+@media (max-width: 1023px) {
+  .side-nav-desktop { display: none; }
+}
