@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import BottomNav from "@/components/BottomNav";
-import SideNav from "@/components/SideNav";
+import AppShell from "@/components/AppShell";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 export const metadata: Metadata = {
@@ -25,15 +24,7 @@ export default function RootLayout({
     <html lang="ko" className="h-full antialiased">
       <body className="min-h-full">
         <ServiceWorkerRegister />
-        <div className="app-shell min-h-screen">
-          <SideNav />
-          <main className="mx-auto w-full max-w-2xl px-4 pb-24 pt-4 lg:max-w-4xl lg:px-8 lg:pb-8 lg:pt-8">
-            {children}
-          </main>
-        </div>
-        <div className="bottom-nav-mobile">
-          <BottomNav />
-        </div>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
