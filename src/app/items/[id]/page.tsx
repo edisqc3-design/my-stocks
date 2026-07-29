@@ -14,6 +14,12 @@ type ItemDetail = {
   category_id: string | null;
   location_id: string | null;
   locations: { name: string } | null;
+  supplier: string | null;
+  purchase_date: string | null;
+  unit_price: number | null;
+  reorder_url: string | null;
+  expiry_date: string | null;
+  memo: string | null;
 };
 
 type Photo = { id: string; storage_path: string };
@@ -38,7 +44,18 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   const [categories, setCategories] = useState<Category[]>([]);
   const [moveTarget, setMoveTarget] = useState("");
   const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ name: "", categoryId: "", minQuantity: 0, quantity: 0 });
+  const [editForm, setEditForm] = useState({
+    name: "",
+    categoryId: "",
+    minQuantity: 0,
+    quantity: 0,
+    supplier: "",
+    purchaseDate: "",
+    unitPrice: 0,
+    reorderUrl: "",
+    expiryDate: "",
+    memo: "",
+  });
   const [editingMovementId, setEditingMovementId] = useState<string | null>(null);
   const [editMovementValue, setEditMovementValue] = useState(0);
   const [editMovementNote, setEditMovementNote] = useState("");
@@ -54,7 +71,9 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   const load = useCallback(async () => {
     const { data } = await supabase
       .from("items")
-      .select("id, name, barcode, quantity, min_quantity, category_id, location_id, locations(name)")
+      .select(
+        "id, name, barcode, quantity, min_quantity, category_id, location_id, locations(name), supplier, purchase_date, unit_price, reorder_url, expiry_date, memo"
+      )
       .eq("id", id)
       .single();
     const detail = data as unknown as ItemDetail;
@@ -65,6 +84,12 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
         categoryId: detail.category_id ?? "",
         minQuantity: detail.min_quantity,
         quantity: detail.quantity,
+        supplier: detail.supplier ?? "",
+        purchaseDate: detail.purchase_date ?? "",
+        unitPrice: detail.unit_price ?? 0,
+        reorderUrl: detail.reorder_url ?? "",
+        expiryDate: detail.expiry_date ?? "",
+        memo: detail.memo ?? "",
       });
     }
 
@@ -230,6 +255,12 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
         name: editForm.name.trim(),
         category_id: editForm.categoryId || null,
         min_quantity: editForm.minQuantity,
+        supplier: editForm.supplier.trim() || null,
+        purchase_date: editForm.purchaseDate || null,
+        unit_price: editForm.unitPrice || null,
+        reorder_url: editForm.reorderUrl.trim() || null,
+        expiry_date: editForm.expiryDate || null,
+        memo: editForm.memo.trim() || null,
       })
       .eq("id", item.id);
 
@@ -484,6 +515,122 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
             <p className="text-2xl font-bold">{item.min_quantity}</p>
           )}
         </div>
+      </div>
+
+      {/* 구매 정보 */}
+      <div className="rounded-2xl bg-[var(--card)] p-4 shadow-sm">
+        <h2 className="mb-3 font-semibold">구매 정보</h2>
+        {editing ? (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs text-[var(--ink-soft)]">구입처</label>
+                <input
+                  value={editForm.supplier}
+                  onChange={(e) => setEditForm({ ...editForm, supplier: e.target.value })}
+                  className="w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-sm"
+                  placeholder="예: 쿠팡, OO문구"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-[var(--ink-soft)]">구입일</label>
+                <input
+                  type="date"
+                  value={editForm.purchaseDate}
+                  onChange={(e) => setEditForm({ ...editForm, purchaseDate: e.target.value })}
+                  className="w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-sm"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs text-[var(--ink-soft)]">단가/구매금액</label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={editForm.unitPrice === 0 ? "" : editForm.unitPrice}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, unitPrice: Math.max(0, Number(e.target.value) || 0) })
+                  }
+                  placeholder="0"
+                  className="w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-[var(--ink-soft)]">유효기간</label>
+                <input
+                  type="date"
+                  value={editForm.expiryDate}
+                  onChange={(e) => setEditForm({ ...editForm, expiryDate: e.target.value })}
+                  className="w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-[var(--ink-soft)]">재주문 링크(구매처 URL)</label>
+              <input
+                value={editForm.reorderUrl}
+                onChange={(e) => setEditForm({ ...editForm, reorderUrl: e.target.value })}
+                className="w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-sm"
+                placeholder="https://..."
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-[var(--ink-soft)]">비고/메모</label>
+              <textarea
+                value={editForm.memo}
+                onChange={(e) => setEditForm({ ...editForm, memo: e.target.value })}
+                rows={3}
+                className="w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-sm"
+                placeholder="자유롭게 메모를 남겨주세요."
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between gap-2">
+              <span className="text-[var(--ink-soft)]">구입처</span>
+              <span className="text-right">{item.supplier ?? "-"}</span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="text-[var(--ink-soft)]">구입일</span>
+              <span className="text-right">{item.purchase_date ?? "-"}</span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="text-[var(--ink-soft)]">단가/구매금액</span>
+              <span className="text-right">
+                {item.unit_price != null ? `${item.unit_price.toLocaleString("ko-KR")}원` : "-"}
+              </span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="text-[var(--ink-soft)]">유효기간</span>
+              <span className="text-right">{item.expiry_date ?? "-"}</span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="text-[var(--ink-soft)]">재주문 링크</span>
+              {item.reorder_url ? (
+                <a
+                  href={item.reorder_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="max-w-[60%] truncate text-right text-[var(--primary)] underline"
+                >
+                  {item.reorder_url}
+                </a>
+              ) : (
+                <span className="text-right">-</span>
+              )}
+            </div>
+            {item.memo && (
+              <div>
+                <span className="text-[var(--ink-soft)]">비고/메모</span>
+                <p className="mt-1 whitespace-pre-wrap rounded-lg bg-[var(--paper)] p-2 text-[var(--ink)]">
+                  {item.memo}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 사무실 이동 */}
