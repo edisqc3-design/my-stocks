@@ -14,7 +14,7 @@ import {
   ClipboardCheck,
   BarChart3,
 } from "lucide-react";
-import SyncStatusBadge from "./SyncStatusBadge";
+import UserBadge from "./UserBadge";
 
 const TABS = [
   { href: "/", label: "홈", icon: LayoutDashboard },
@@ -78,7 +78,7 @@ export default function SideNav() {
         <SideNavLinks />
       </Suspense>
 
-      <SyncStatusBadge />
+      <UserBadge />
     </aside>
   );
 }
