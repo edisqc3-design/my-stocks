@@ -39,6 +39,9 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   const [moveTarget, setMoveTarget] = useState("");
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", categoryId: "", minQuantity: 0 });
+  const [editingMovementId, setEditingMovementId] = useState<string | null>(null);
+  const [editMovementValue, setEditMovementValue] = useState(0);
+  const [editMovementNote, setEditMovementNote] = useState("");
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -106,6 +109,42 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
       })
       .eq("id", item.id);
     setEditing(false);
+    load();
+  }
+
+  function startEditMovement(m: Movement) {
+    setEditingMovementId(m.id);
+    setEditMovementValue(m.quantity_change);
+    setEditMovementNote(m.note ?? "");
+  }
+
+  function cancelEditMovement() {
+    setEditingMovementId(null);
+  }
+
+  async function handleSaveMovement(m: Movement) {
+    if (!item) return;
+    const diff = editMovementValue - m.quantity_change;
+    if (diff !== 0) {
+      const { data: current } = await supabase.from("items").select("quantity").eq("id", item.id).single();
+      const currentQty = current?.quantity ?? item.quantity;
+      await supabase.from("items").update({ quantity: currentQty + diff }).eq("id", item.id);
+    }
+    await supabase
+      .from("stock_movements")
+      .update({ quantity_change: editMovementValue, note: editMovementNote.trim() || null })
+      .eq("id", m.id);
+    setEditingMovementId(null);
+    load();
+  }
+
+  async function handleDeleteMovement(m: Movement) {
+    if (!item) return;
+    if (!confirm("이 입출고 기록을 삭제하시겠습니까? 재고 수량이 원복됩니다.")) return;
+    const { data: current } = await supabase.from("items").select("quantity").eq("id", item.id).single();
+    const currentQty = current?.quantity ?? item.quantity;
+    await supabase.from("items").update({ quantity: currentQty - m.quantity_change }).eq("id", item.id);
+    await supabase.from("stock_movements").delete().eq("id", m.id);
     load();
   }
 
@@ -255,17 +294,80 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
           <p className="py-3 text-center text-sm text-[var(--ink-soft)]">이력이 없습니다.</p>
         ) : (
           <ul className="divide-y divide-[var(--line)]">
-            {movements.map((m) => (
-              <li key={m.id} className="flex justify-between py-2 text-sm">
-                <span className="text-[var(--ink-soft)]">
-                  {new Date(m.created_at).toLocaleString("ko-KR")}
-                </span>
-                <span style={{ color: m.quantity_change >= 0 ? "var(--ok)" : "var(--danger)" }}>
-                  {m.quantity_change > 0 ? "+" : ""}
-                  {m.quantity_change}
-                </span>
-              </li>
-            ))}
+            {movements.map((m) => {
+              const editable = m.type !== "move";
+              const isEditing = editingMovementId === m.id;
+              return (
+                <li key={m.id} className="py-2 text-sm">
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <span className="text-[var(--ink-soft)]">
+                        {new Date(m.created_at).toLocaleString("ko-KR")}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={editMovementValue}
+                          onChange={(e) => setEditMovementValue(Number(e.target.value) || 0)}
+                          className="w-20 rounded-lg border border-[var(--line)] px-2 py-1 text-sm"
+                        />
+                        <input
+                          type="text"
+                          placeholder="메모"
+                          value={editMovementNote}
+                          onChange={(e) => setEditMovementNote(e.target.value)}
+                          className="flex-1 rounded-lg border border-[var(--line)] px-2 py-1 text-sm"
+                        />
+                        <button
+                          onClick={() => handleSaveMovement(m)}
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--ok)] text-white"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button
+                          onClick={cancelEditMovement}
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--line)]"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <span className="text-[var(--ink-soft)]">
+                          {new Date(m.created_at).toLocaleString("ko-KR")}
+                        </span>
+                        {m.note && <p className="text-xs text-[var(--ink-soft)]">{m.note}</p>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span style={{ color: m.quantity_change >= 0 ? "var(--ok)" : "var(--danger)" }}>
+                          {m.quantity_change > 0 ? "+" : ""}
+                          {m.quantity_change}
+                        </span>
+                        {editable && (
+                          <div className="flex shrink-0 gap-1">
+                            <button
+                              onClick={() => startEditMovement(m)}
+                              className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--line)] text-[var(--ink-soft)]"
+                            >
+                              <Pencil size={12} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMovement(m)}
+                              className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--danger)] text-[var(--danger)]"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
