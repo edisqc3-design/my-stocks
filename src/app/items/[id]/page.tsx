@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Trash2, ArrowLeft, Repeat, Pencil, Check, X, ImagePlus, ImageOff } from "lucide-react";
+import { Trash2, ArrowLeft, Repeat, Pencil, Check, X, ImagePlus, ImageOff, Camera } from "lucide-react";
 
 type ItemDetail = {
   id: string;
@@ -45,6 +45,11 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   const [brokenPhotoIds, setBrokenPhotoIds] = useState<Set<string>>(new Set());
   const [photoUploading, setPhotoUploading] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -93,10 +98,8 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
     photoInputRef.current?.click();
   }
 
-  // 선택한 이미지를 새로 업로드하고, 기존 사진들은 모두 교체한다.
-  async function handlePhotoReplace(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    e.target.value = "";
+  // 선택/촬영한 이미지들을 새로 업로드하고, 기존 사진들은 모두 교체한다.
+  async function uploadPhotos(files: File[]) {
     if (!item || files.length === 0) return;
 
     setPhotoUploading(true);
@@ -127,6 +130,75 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
       setPhotoUploading(false);
     }
   }
+
+  // 갤러리에서 선택한 이미지 처리
+  async function handlePhotoReplace(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    await uploadPhotos(files);
+  }
+
+  function stopCameraStream() {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+  }
+
+  async function openCamera() {
+    setCameraError(null);
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      // 카메라 API를 지원하지 않는 환경 → 파일 선택창으로 대체
+      cameraInputRef.current?.click();
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      setCameraOpen(true);
+    } catch (err) {
+      // 카메라 접근 거부/실패 → 파일 선택창으로 대체
+      console.error("카메라 접근 실패:", err);
+      setCameraError("카메라에 접근할 수 없습니다. 파일 선택으로 대신 진행해주세요.");
+      cameraInputRef.current?.click();
+    }
+  }
+
+  function closeCamera() {
+    stopCameraStream();
+    setCameraOpen(false);
+  }
+
+  async function capturePhoto() {
+    const video = videoRef.current;
+    if (!video || video.videoWidth === 0) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+    closeCamera();
+    if (!blob) return;
+    const file = new File([blob], `${crypto.randomUUID()}.jpg`, { type: "image/jpeg" });
+    await uploadPhotos([file]);
+  }
+
+  // 카메라 스트림 연결 및 정리
+  useEffect(() => {
+    if (cameraOpen && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [cameraOpen]);
+
+  useEffect(() => {
+    return () => stopCameraStream();
+  }, []);
 
   // 사진 한 장 삭제
   async function handleDeletePhoto(p: Photo) {
@@ -256,6 +328,16 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
             })}
             {editing && (
               <button
+                onClick={openCamera}
+                disabled={photoUploading}
+                className="flex h-32 w-32 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--line)] text-[var(--ink-soft)] disabled:opacity-60"
+              >
+                <Camera size={20} />
+                <span className="text-xs">촬영</span>
+              </button>
+            )}
+            {editing && (
+              <button
                 onClick={handlePhotoButtonClick}
                 disabled={photoUploading}
                 className="flex h-32 w-32 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--line)] text-[var(--ink-soft)] disabled:opacity-60"
@@ -266,15 +348,48 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
             )}
           </div>
           {editing && (
-            <input
-              ref={photoInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={handlePhotoReplace}
-            />
+            <>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handlePhotoReplace}
+              />
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handlePhotoReplace}
+              />
+            </>
           )}
+          {cameraError && <p className="text-xs text-red-500">{cameraError}</p>}
+        </div>
+      )}
+
+      {cameraOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 p-4">
+          <div className="relative w-full max-w-md overflow-hidden rounded-xl bg-black">
+            <video ref={videoRef} playsInline muted className="w-full" />
+          </div>
+          <div className="mt-4 flex items-center gap-4">
+            <button
+              onClick={closeCamera}
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white"
+            >
+              <X size={20} />
+            </button>
+            <button
+              onClick={capturePhoto}
+              className="h-16 w-16 rounded-full border-4 border-white/70 bg-white"
+              aria-label="촬영"
+            />
+          </div>
+          <p className="mt-3 text-xs text-white/60">촬영 버튼을 누르면 사진이 즉시 업로드되어 기존 사진을 대체합니다.</p>
         </div>
       )}
 
