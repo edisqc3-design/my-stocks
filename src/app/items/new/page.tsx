@@ -26,7 +26,7 @@ function NewItemForm() {
   const [saving, setSaving] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [photoSize, setPhotoSize] = useState<"sm" | "md" | "lg">("md");
+  const [photoSize, setPhotoSize] = useState<"sm" | "md" | "lg">("lg");
 
   const [form, setForm] = useState({
     name: "",
@@ -173,7 +173,6 @@ function NewItemForm() {
     md: "h-28 w-28",
     lg: "h-36 w-36",
   }[photoSize];
-  const photoIconSize = { sm: 20, md: 26, lg: 32 }[photoSize];
 
   return (
     <div className="space-y-5">
@@ -184,8 +183,24 @@ function NewItemForm() {
 
       {/* 사진 */}
       <div>
-        <div className="mb-2 flex items-center justify-between">
-          <label className="block text-sm font-medium text-[var(--ink-soft)]">사진</label>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-y-2">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-[var(--ink-soft)]">사진</label>
+            <button
+              onClick={openCamera}
+              className="flex items-center gap-1 rounded-lg border border-[var(--line)] px-2 py-1 text-xs font-medium text-[var(--ink-soft)]"
+            >
+              <Camera size={14} />
+              촬영
+            </button>
+            <button
+              onClick={() => galleryInputRef.current?.click()}
+              className="flex items-center gap-1 rounded-lg border border-[var(--line)] px-2 py-1 text-xs font-medium text-[var(--ink-soft)]"
+            >
+              <ImagePlus size={14} />
+              이미지 첨부
+            </button>
+          </div>
           <div className="flex items-center gap-1 rounded-lg border border-[var(--line)] p-0.5">
             {(["sm", "md", "lg"] as const).map((size) => (
               <button
@@ -215,20 +230,11 @@ function NewItemForm() {
               </button>
             </div>
           ))}
-          <button
-            onClick={openCamera}
-            className={`flex ${photoBoxClass} flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--line)] text-[var(--ink-soft)]`}
-          >
-            <Camera size={photoIconSize} />
-            <span className="text-[10px]">촬영</span>
-          </button>
-          <button
-            onClick={() => galleryInputRef.current?.click()}
-            className={`flex ${photoBoxClass} flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--line)] text-[var(--ink-soft)]`}
-          >
-            <ImagePlus size={photoIconSize} />
-            <span className="text-[10px]">이미지 첨부</span>
-          </button>
+          {photos.length === 0 && (
+            <p className="text-xs text-[var(--ink-soft)]">
+              위의 &quot;촬영&quot; 또는 &quot;이미지 첨부&quot; 버튼을 눌러 사진을 추가해주세요.
+            </p>
+          )}
           <input
             ref={cameraInputRef}
             type="file"
