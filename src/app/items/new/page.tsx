@@ -36,6 +36,12 @@ function NewItemForm() {
     locationId: "",
     quantity: 0,
     minQuantity: 0,
+    supplier: "",
+    purchaseDate: "",
+    unitPrice: 0,
+    reorderUrl: "",
+    expiryDate: "",
+    memo: "",
   });
 
   useEffect(() => {
@@ -130,6 +136,12 @@ function NewItemForm() {
           location_id: form.locationId || null,
           quantity: form.quantity,
           min_quantity: form.minQuantity,
+          supplier: form.supplier || null,
+          purchase_date: form.purchaseDate || null,
+          unit_price: form.unitPrice || null,
+          reorder_url: form.reorderUrl || null,
+          expiry_date: form.expiryDate || null,
+          memo: form.memo || null,
         })
         .select()
         .single();
@@ -167,6 +179,12 @@ function NewItemForm() {
         locationId: form.locationId || undefined,
         quantity: form.quantity,
         minQuantity: form.minQuantity,
+        supplier: form.supplier || undefined,
+        purchaseDate: form.purchaseDate || undefined,
+        unitPrice: form.unitPrice || undefined,
+        reorderUrl: form.reorderUrl || undefined,
+        expiryDate: form.expiryDate || undefined,
+        memo: form.memo || undefined,
         photoDataUrls: photos,
         createdAt: new Date().toISOString(),
         synced: false,
@@ -377,6 +395,68 @@ function NewItemForm() {
           />
         </Field>
       </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="구입처">
+          <input
+            value={form.supplier}
+            onChange={(e) => setForm({ ...form, supplier: e.target.value })}
+            className="input"
+            placeholder="예: 쿠팡, OO문구"
+          />
+        </Field>
+        <Field label="구입일">
+          <input
+            type="date"
+            value={form.purchaseDate}
+            onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })}
+            className="input"
+          />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="단가/구매금액">
+          <input
+            type="number"
+            inputMode="numeric"
+            value={form.unitPrice === 0 ? "" : form.unitPrice}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setForm({ ...form, unitPrice: raw === "" ? 0 : Math.max(0, Number(raw) || 0) });
+            }}
+            placeholder="0"
+            className="input"
+          />
+        </Field>
+        <Field label="유효기간(소모품 유통기한)">
+          <input
+            type="date"
+            value={form.expiryDate}
+            onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
+            className="input"
+          />
+        </Field>
+      </div>
+
+      <Field label="재주문 링크(구매처 URL)">
+        <input
+          value={form.reorderUrl}
+          onChange={(e) => setForm({ ...form, reorderUrl: e.target.value })}
+          className="input"
+          placeholder="https://..."
+        />
+      </Field>
+
+      <Field label="비고/메모">
+        <textarea
+          value={form.memo}
+          onChange={(e) => setForm({ ...form, memo: e.target.value })}
+          className="input"
+          rows={3}
+          placeholder="자유롭게 메모를 남겨주세요."
+        />
+      </Field>
 
       <button
         disabled={saving}
