@@ -29,6 +29,7 @@ export default function ItemsPage() {
   const [locations, setLocations] = useState<FilterOption[]>([]);
   const [categories, setCategories] = useState<FilterOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [brokenThumbs, setBrokenThumbs] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     supabase.from("locations").select("id, name").order("name").then(({ data }) => setLocations(data ?? []));
@@ -152,9 +153,14 @@ export default function ItemsPage() {
             <li key={item.id}>
               <Link href={`/items/${item.id}`} className="flex items-center gap-3 px-4 py-3">
                 <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-[var(--paper)]">
-                  {thumbUrl ? (
+                  {thumbUrl && !brokenThumbs.has(item.id) ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={thumbUrl} alt="" className="h-full w-full object-cover" />
+                    <img
+                      src={thumbUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      onError={() => setBrokenThumbs((prev) => new Set(prev).add(item.id))}
+                    />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-[var(--ink-soft)]">
                       <Search size={14} />
