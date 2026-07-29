@@ -72,9 +72,13 @@ export async function printItemLabel(params: { name: string; barcodeValue: strin
   const payload = new Uint8Array(commands);
 
   // BLE 특성 쓰기는 청크 단위 전송이 안전 (기기별 MTU 제한 고려, 180바이트 단위 예시)
-  const CHUNK_SIZE = 180;
+  // 저가형 BLE 프린터는 협상되는 MTU가 20바이트 안팎으로 작은 경우가 많습니다.
+  // 청크가 실제 MTU보다 크면 브라우저/OS가 에러 없이 조용히 잘라버려서
+  // "연결은 됐는데 출력이 안 되는" 증상이 생깁니다. 작은 청크 + 약간의 딜레이로 안전하게 전송합니다.
+  const CHUNK_SIZE = 20;
   for (let i = 0; i < payload.length; i += CHUNK_SIZE) {
     const chunk = payload.slice(i, i + CHUNK_SIZE);
     await cachedCharacteristic.writeValueWithoutResponse(chunk);
+    await new Promise((resolve) => setTimeout(resolve, 15));
   }
 }
