@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import BottomNav from "./BottomNav";
 import SideNav from "./SideNav";
+import NotificationBell from "./NotificationBell";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -23,6 +24,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className="bottom-nav-mobile">
         <BottomNav />
       </div>
+      <NotificationBell />
     </>
   );
 }
