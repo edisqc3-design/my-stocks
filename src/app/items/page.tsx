@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useRealtimeSync } from "@/lib/realtime";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Trash2, Pencil, X, ListChecks } from "lucide-react";
 import { db } from "@/lib/offline-db";
 
 type Item = {
@@ -21,6 +22,7 @@ type Item = {
 type FilterOption = { id: string; name: string };
 
 export default function ItemsPage() {
+  const router = useRouter();
   const [items, setItems] = useState<Item[]>([]);
   const [query, setQuery] = useState("");
   const [lowOnly, setLowOnly] = useState(false);
@@ -31,6 +33,8 @@ export default function ItemsPage() {
   const [loading, setLoading] = useState(true);
   const [brokenThumbs, setBrokenThumbs] = useState<Set<string>>(new Set());
   const [lastInDates, setLastInDates] = useState<Record<string, string>>({});
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     supabase.from("locations").select("id, name").order("name").then(({ data }) => setLocations(data ?? []));
@@ -101,16 +105,56 @@ export default function ItemsPage() {
 
   useRealtimeSync(load);
 
+  function toggleSelectMode() {
+    setSelectMode((v) => !v);
+    setSelectedIds(new Set());
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`선택한 ${selectedIds.size}개 품목을 삭제하시겠습니까?`)) return;
+    await supabase.from("items").delete().in("id", Array.from(selectedIds));
+    setSelectedIds(new Set());
+    setSelectMode(false);
+    load();
+  }
+
+  function handleEditSelected() {
+    if (selectedIds.size !== 1) return;
+    const [id] = Array.from(selectedIds);
+    router.push(`/items/${id}`);
+  }
+
+  const gridCols = selectMode ? "grid-cols-[40px_110px_1fr_1fr_1fr_1fr]" : "grid-cols-[110px_1fr_1fr_1fr_1fr]";
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-20">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">재고현황</h1>
-        <Link
-          href="/items/new"
-          className="flex items-center gap-1 rounded-full bg-[var(--primary)] px-3 py-1.5 text-sm font-semibold text-white"
-        >
-          <Plus size={16} /> 추가
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleSelectMode}
+            className="flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--card)] px-3 py-1.5 text-sm font-semibold text-[var(--ink-soft)]"
+          >
+            {selectMode ? <X size={16} /> : <ListChecks size={16} />}
+            {selectMode ? "선택 취소" : "선택"}
+          </button>
+          <Link
+            href="/items/new"
+            className="flex items-center gap-1 rounded-full bg-[var(--primary)] px-3 py-1.5 text-sm font-semibold text-white"
+          >
+            <Plus size={16} /> 추가
+          </Link>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--card)] px-3 py-2">
@@ -164,7 +208,8 @@ export default function ItemsPage() {
       <div className="overflow-x-auto rounded-2xl bg-[var(--card)] shadow-sm">
         <div className="min-w-[680px]">
           {/* 열 헤더 */}
-          <div className="grid grid-cols-[110px_1fr_1fr_1fr_1fr] divide-x divide-[var(--line)] border-b border-[var(--line)] text-sm font-bold text-[var(--ink)]">
+          <div className={`grid ${gridCols} divide-x divide-[var(--line)] border-b border-[var(--line)] text-sm font-bold text-[var(--ink)]`}>
+            {selectMode && <div className="px-2 py-3" />}
             <div className="truncate px-3 py-3 text-center">품목 사진</div>
             <div className="truncate px-3 py-3 text-center">품목명</div>
             <div className="truncate px-3 py-3 text-center">사무실(위치)</div>
@@ -182,49 +227,97 @@ export default function ItemsPage() {
               const thumb = item.item_photos?.[0]?.storage_path;
               const thumbUrl = thumb ? supabase.storage.from("item-photos").getPublicUrl(thumb).data.publicUrl : null;
               const lastIn = lastInDates[item.id];
+              const checked = selectedIds.has(item.id);
+
+              const rowContent = (
+                <>
+                  {selectMode && (
+                    <div className="flex items-center justify-center px-2">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleSelected(item.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-5 w-5 accent-[var(--primary)]"
+                      />
+                    </div>
+                  )}
+                  <div className="flex items-center justify-center p-2">
+                    <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-[var(--paper)]">
+                      {thumbUrl && !brokenThumbs.has(item.id) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={thumbUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          onError={() => setBrokenThumbs((prev) => new Set(prev).add(item.id))}
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-[var(--ink-soft)]">
+                          <Search size={22} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <p className="truncate px-3 py-4 text-center text-base font-medium">{item.name}</p>
+                  <p className="truncate px-3 py-4 text-center text-sm text-[var(--ink-soft)]">
+                    {item.locations?.name ?? "위치 미지정"}
+                  </p>
+                  <p className="truncate px-3 py-4 text-center text-sm text-[var(--ink-soft)]">
+                    {lastIn ? new Date(lastIn).toLocaleDateString("ko-KR") : "-"}
+                  </p>
+                  <p
+                    className="truncate px-3 py-4 text-center text-base font-semibold"
+                    style={{ color: low ? "var(--danger)" : "var(--ink)" }}
+                  >
+                    {item.quantity}
+                  </p>
+                </>
+              );
+
               return (
                 <li key={item.id}>
-                  <Link
-                    href={`/items/${item.id}`}
-                    className="grid grid-cols-[110px_1fr_1fr_1fr_1fr] items-center divide-x divide-[var(--line)]"
-                  >
-                    <div className="flex items-center justify-center p-2">
-                      <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-[var(--paper)]">
-                        {thumbUrl && !brokenThumbs.has(item.id) ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={thumbUrl}
-                            alt=""
-                            className="h-full w-full object-cover"
-                            onError={() => setBrokenThumbs((prev) => new Set(prev).add(item.id))}
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-[var(--ink-soft)]">
-                            <Search size={22} />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <p className="truncate px-3 py-4 text-center text-base font-medium">{item.name}</p>
-                    <p className="truncate px-3 py-4 text-center text-sm text-[var(--ink-soft)]">
-                      {item.locations?.name ?? "위치 미지정"}
-                    </p>
-                    <p className="truncate px-3 py-4 text-center text-sm text-[var(--ink-soft)]">
-                      {lastIn ? new Date(lastIn).toLocaleDateString("ko-KR") : "-"}
-                    </p>
-                    <p
-                      className="truncate px-3 py-4 text-center text-base font-semibold"
-                      style={{ color: low ? "var(--danger)" : "var(--ink)" }}
+                  {selectMode ? (
+                    <div
+                      onClick={() => toggleSelected(item.id)}
+                      className={`grid ${gridCols} cursor-pointer items-center divide-x divide-[var(--line)]`}
+                      style={{ background: checked ? "var(--primary-soft)" : "transparent" }}
                     >
-                      {item.quantity}
-                    </p>
-                  </Link>
+                      {rowContent}
+                    </div>
+                  ) : (
+                    <Link href={`/items/${item.id}`} className={`grid ${gridCols} items-center divide-x divide-[var(--line)]`}>
+                      {rowContent}
+                    </Link>
+                  )}
                 </li>
               );
             })}
           </ul>
         </div>
       </div>
+
+      {selectMode && selectedIds.size > 0 && (
+        <div className="fixed inset-x-0 bottom-[64px] z-50 flex items-center justify-between gap-3 border-t border-[var(--line)] bg-[var(--card)] px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(36,31,54,0.12)] lg:bottom-0 lg:left-[240px] lg:pb-3">
+          <span className="text-sm font-medium">{selectedIds.size}개 선택됨</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleEditSelected}
+              disabled={selectedIds.size !== 1}
+              title={selectedIds.size !== 1 ? "수정은 1개 품목만 선택했을 때 가능합니다" : "수정"}
+              className="flex items-center gap-1 rounded-full border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--ink)] disabled:opacity-40"
+            >
+              <Pencil size={15} /> 수정
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-1 rounded-full bg-[var(--danger)] px-4 py-2 text-sm font-semibold text-white"
+            >
+              <Trash2 size={15} /> 삭제
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
