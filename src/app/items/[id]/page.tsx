@@ -124,16 +124,11 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
 
   async function handleSaveMovement(m: Movement) {
     if (!item) return;
-    const diff = editMovementValue - m.quantity_change;
-    if (diff !== 0) {
-      const { data: current } = await supabase.from("items").select("quantity").eq("id", item.id).single();
-      const currentQty = current?.quantity ?? item.quantity;
-      await supabase.from("items").update({ quantity: currentQty + diff }).eq("id", item.id);
-    }
     await supabase
       .from("stock_movements")
       .update({ quantity_change: editMovementValue, note: editMovementNote.trim() || null })
       .eq("id", m.id);
+    // items.quantity는 DB 트리거(trg_stock_movements_apply)가 자동으로 반영합니다.
     setEditingMovementId(null);
     load();
   }
@@ -141,10 +136,8 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   async function handleDeleteMovement(m: Movement) {
     if (!item) return;
     if (!confirm("이 입출고 기록을 삭제하시겠습니까? 재고 수량이 원복됩니다.")) return;
-    const { data: current } = await supabase.from("items").select("quantity").eq("id", item.id).single();
-    const currentQty = current?.quantity ?? item.quantity;
-    await supabase.from("items").update({ quantity: currentQty - m.quantity_change }).eq("id", item.id);
     await supabase.from("stock_movements").delete().eq("id", m.id);
+    // items.quantity는 DB 트리거(trg_stock_movements_apply)가 자동으로 반영합니다.
     load();
   }
 
