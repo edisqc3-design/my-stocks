@@ -119,9 +119,7 @@ export default function SettingsPage() {
             </p>
             <h1 className="font-display mt-1 text-2xl font-semibold tracking-tight">설정</h1>
           </div>
-          <div className="rounded-full bg-white/15 px-1 py-1 backdrop-blur-sm">
-            <SyncStatusBadge />
-          </div>
+          <SyncStatusBadge />
         </div>
       </div>
 
