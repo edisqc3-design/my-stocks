@@ -95,6 +95,14 @@ body {
   .scanline { animation: none; }
 }
 
+/* 재고 부족 알림 FAB: 모바일 하단 탭바 위쪽, 데스크톱은 화면 우측 하단 */
+.notification-fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(70px + env(safe-area-inset-bottom) + 12px);
+  z-index: 50;
+}
+
 /* PC(넓은 화면)에서는 좌측 사이드바 내비게이션으로 전환 */
 @media (min-width: 1024px) {
   .app-shell {
@@ -103,6 +111,7 @@ body {
   }
   .bottom-nav-mobile { display: none; }
   .side-nav-desktop { display: flex; }
+  .notification-fab { bottom: 24px; }
 }
 @media (max-width: 1023px) {
   .side-nav-desktop { display: none; }
