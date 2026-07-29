@@ -59,7 +59,7 @@ async function syncPendingMovements() {
   for (const m of pending) {
     const { data: item } = await supabase
       .from("items")
-      .select("id, quantity")
+      .select("id")
       .eq("barcode", m.itemBarcode)
       .single();
 
@@ -88,11 +88,7 @@ async function syncPendingMovements() {
       note: m.note ?? null,
       client_uuid: m.clientUuid,
     });
-
-    await supabase
-      .from("items")
-      .update({ quantity: item.quantity + m.quantityChange })
-      .eq("id", item.id);
+    // items.quantity는 DB 트리거(trg_stock_movements_apply)가 자동으로 반영합니다.
 
     await db.pendingMovements.update(m.id!, { synced: true });
   }
