@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { db } from "@/lib/offline-db";
 import { syncAll } from "@/lib/sync";
-import { Camera, X } from "lucide-react";
+import { Camera, X, ArrowLeft } from "lucide-react";
 
 type Location = { id: string; name: string };
 type Category = { id: string; name: string };
@@ -104,6 +105,9 @@ function NewItemForm() {
 
   return (
     <div className="space-y-5">
+      <Link href="/items" className="flex items-center gap-1 text-sm text-[var(--ink-soft)]">
+        <ArrowLeft size={16} /> 품목 목록
+      </Link>
       <h1 className="text-xl font-bold">신규 품목 등록</h1>
 
       {/* 사진 */}
