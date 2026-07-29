@@ -35,6 +35,8 @@ export default function ItemsPage() {
   const [lastInDates, setLastInDates] = useState<Record<string, string>>({});
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   useEffect(() => {
     supabase.from("locations").select("id, name").order("name").then(({ data }) => setLocations(data ?? []));
@@ -103,6 +105,10 @@ export default function ItemsPage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [query, lowOnly, locationFilter, categoryFilter]);
+
   useRealtimeSync(load);
 
   function toggleSelectMode() {
@@ -135,6 +141,22 @@ export default function ItemsPage() {
   }
 
   const gridCols = selectMode ? "grid-cols-[40px_110px_1fr_1fr_1fr_1fr]" : "grid-cols-[110px_1fr_1fr_1fr_1fr]";
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedItems = items.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const pageNumbers: (number | "...")[] = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+  } else {
+    pageNumbers.push(1);
+    if (currentPage > 3) pageNumbers.push("...");
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+      pageNumbers.push(i);
+    }
+    if (currentPage < totalPages - 2) pageNumbers.push("...");
+    pageNumbers.push(totalPages);
+  }
 
   return (
     <div className="space-y-4 pb-20">
@@ -251,7 +273,7 @@ export default function ItemsPage() {
             {!loading && items.length === 0 && (
               <li className="p-4 text-center text-sm text-[var(--ink-soft)]">품목이 없습니다.</li>
             )}
-            {items.map((item) => {
+            {pagedItems.map((item) => {
               const low = item.quantity <= item.min_quantity;
               const thumb = item.item_photos?.[0]?.storage_path;
               const thumbUrl = thumb ? supabase.storage.from("item-photos").getPublicUrl(thumb).data.publicUrl : null;
@@ -325,6 +347,44 @@ export default function ItemsPage() {
           </ul>
         </div>
       </div>
+
+      {!loading && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-1">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="rounded-full border border-[var(--line)] bg-[var(--card)] px-3 py-1.5 text-sm font-medium text-[var(--ink-soft)] disabled:opacity-40"
+          >
+            이전
+          </button>
+          {pageNumbers.map((n, idx) =>
+            n === "..." ? (
+              <span key={`ellipsis-${idx}`} className="px-2 text-sm text-[var(--ink-soft)]">
+                …
+              </span>
+            ) : (
+              <button
+                key={n}
+                onClick={() => setPage(n)}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold"
+                style={{
+                  background: n === currentPage ? "var(--primary)" : "transparent",
+                  color: n === currentPage ? "#fff" : "var(--ink-soft)",
+                }}
+              >
+                {n}
+              </button>
+            )
+          )}
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="rounded-full border border-[var(--line)] bg-[var(--card)] px-3 py-1.5 text-sm font-medium text-[var(--ink-soft)] disabled:opacity-40"
+          >
+            다음
+          </button>
+        </div>
+      )}
 
     </div>
   );
