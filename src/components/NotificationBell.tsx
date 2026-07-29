@@ -193,13 +193,24 @@ export default function NotificationBell() {
         <div className="absolute bottom-16 right-0 flex max-h-[26rem] w-80 flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--card)] shadow-[0_10px_28px_rgba(36,31,54,0.2)]">
           <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
             <h3 className="text-sm font-semibold">재고 부족 알림</h3>
-            <button
-              onClick={() => setOpen(false)}
-              aria-label="알림함 닫기"
-              className="text-[var(--ink-soft)]"
-            >
-              <X size={16} />
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                onClick={markAllVisibleRead}
+                disabled={!hasUnreadInView}
+                aria-label="현재 목록 모두 읽음 처리"
+                className="flex items-center justify-center gap-1 rounded-full border border-[var(--line)] px-3 py-1 text-xs font-medium text-[var(--ink-soft)] disabled:opacity-40"
+              >
+                <Check size={12} />
+                모두 읽음
+              </button>
+              <button
+                onClick={() => setOpen(false)}
+                aria-label="알림함 닫기"
+                className="text-[var(--ink-soft)]"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-col gap-2 border-b border-[var(--line)] px-4 py-2">
@@ -229,15 +240,6 @@ export default function NotificationBell() {
                 ))}
               </select>
             </div>
-            <button
-              onClick={markAllVisibleRead}
-              disabled={!hasUnreadInView}
-              aria-label="현재 목록 모두 읽음 처리"
-              className="flex shrink-0 items-center justify-center gap-1 self-end rounded-full border border-[var(--line)] px-3 py-1 text-xs font-medium text-[var(--ink-soft)] disabled:opacity-40"
-            >
-              <Check size={12} />
-              모두 읽음
-            </button>
           </div>
 
           <div className="overflow-y-auto">
