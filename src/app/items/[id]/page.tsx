@@ -628,7 +628,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
               <div>
                 <label className="mb-1 block text-xs text-[var(--ink-soft)]">사무실 위치</label>
                 <div className="w-full rounded-lg border border-[var(--line)] bg-[var(--paper)] px-2 py-1.5 text-sm text-[var(--ink-soft)]">
-                  {item.locations?.name ?? "위치 미지정"} (변경은 아래 &quot;사무실 이동&quot;에서)
+                  {item.locations?.name ?? "위치 미지정"}
                 </div>
               </div>
               <div>
