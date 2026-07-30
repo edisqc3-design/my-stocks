@@ -541,10 +541,21 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                 />
               </div>
             </div>
-            <div>
-              <label className="mb-1 block text-xs text-[var(--ink-soft)]">사무실 위치</label>
-              <div className="w-full rounded-lg border border-[var(--line)] bg-[var(--paper)] px-2 py-1.5 text-sm text-[var(--ink-soft)]">
-                {item.locations?.name ?? "위치 미지정"} (변경은 아래 &quot;사무실 이동&quot;에서)
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs text-[var(--ink-soft)]">사무실 위치</label>
+                <div className="w-full rounded-lg border border-[var(--line)] bg-[var(--paper)] px-2 py-1.5 text-sm text-[var(--ink-soft)]">
+                  {item.locations?.name ?? "위치 미지정"} (변경은 아래 &quot;사무실 이동&quot;에서)
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-[var(--ink-soft)]">재주문 링크(구매처 URL)</label>
+                <input
+                  value={editForm.reorderUrl}
+                  onChange={(e) => setEditForm({ ...editForm, reorderUrl: e.target.value })}
+                  className="w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-sm"
+                  placeholder="https://..."
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -570,15 +581,6 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                   className="w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-sm"
                 />
               </div>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-[var(--ink-soft)]">재주문 링크(구매처 URL)</label>
-              <input
-                value={editForm.reorderUrl}
-                onChange={(e) => setEditForm({ ...editForm, reorderUrl: e.target.value })}
-                className="w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-sm"
-                placeholder="https://..."
-              />
             </div>
             <div>
               <label className="mb-1 block text-xs text-[var(--ink-soft)]">비고/메모</label>
