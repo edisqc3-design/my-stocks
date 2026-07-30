@@ -448,7 +448,6 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
         ) : (
           <div>
             <h1 className="text-xl font-bold">{item.name}</h1>
-            <p className="text-sm text-[var(--ink-soft)]">{item.locations?.name ?? "위치 미지정"}</p>
           </div>
         )}
 
@@ -588,38 +587,44 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
           </div>
         ) : (
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between gap-2">
-              <span className="text-[var(--ink-soft)]">구입처</span>
-              <span className="text-right">{item.supplier ?? "-"}</span>
-            </div>
-            <div className="flex justify-between gap-2">
-              <span className="text-[var(--ink-soft)]">구입일</span>
-              <span className="text-right">{item.purchase_date ?? "-"}</span>
-            </div>
-            <div className="flex justify-between gap-2">
-              <span className="text-[var(--ink-soft)]">단가/구매금액</span>
-              <span className="text-right">
-                {item.unit_price != null ? `${item.unit_price.toLocaleString("ko-KR")}원` : "-"}
-              </span>
-            </div>
-            <div className="flex justify-between gap-2">
-              <span className="text-[var(--ink-soft)]">유효기간</span>
-              <span className="text-right">{item.expiry_date ?? "-"}</span>
-            </div>
-            <div className="flex justify-between gap-2">
-              <span className="text-[var(--ink-soft)]">재주문 링크</span>
-              {item.reorder_url ? (
-                <a
-                  href={item.reorder_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="max-w-[60%] truncate text-right text-[var(--primary)] underline"
-                >
-                  {item.reorder_url}
-                </a>
-              ) : (
-                <span className="text-right">-</span>
-              )}
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+              <div className="flex justify-between gap-2">
+                <span className="text-[var(--ink-soft)]">구입처</span>
+                <span className="text-right">{item.supplier ?? "-"}</span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-[var(--ink-soft)]">단가/구매금액</span>
+                <span className="text-right">
+                  {item.unit_price != null ? `${item.unit_price.toLocaleString("ko-KR")}원` : "-"}
+                </span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-[var(--ink-soft)]">구입일</span>
+                <span className="text-right">{item.purchase_date ?? "-"}</span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-[var(--ink-soft)]">유효기간</span>
+                <span className="text-right">{item.expiry_date ?? "-"}</span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-[var(--ink-soft)]">사무실 위치</span>
+                <span className="text-right">{item.locations?.name ?? "위치 미지정"}</span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-[var(--ink-soft)]">재주문 링크</span>
+                {item.reorder_url ? (
+                  <a
+                    href={item.reorder_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="max-w-[60%] truncate text-right text-[var(--primary)] underline"
+                  >
+                    {item.reorder_url}
+                  </a>
+                ) : (
+                  <span className="text-right">-</span>
+                )}
+              </div>
             </div>
             {item.memo && (
               <div>
