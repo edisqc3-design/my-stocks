@@ -426,7 +426,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
 
       <div className="flex items-start justify-between gap-2">
         {editing ? (
-          <div className="flex-1 space-y-2">
+          <div className="flex-1 grid grid-cols-2 gap-2">
             <input
               value={editForm.name}
               onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
@@ -539,6 +539,12 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                   onChange={(e) => setEditForm({ ...editForm, purchaseDate: e.target.value })}
                   className="w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-sm"
                 />
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-[var(--ink-soft)]">사무실 위치</label>
+              <div className="w-full rounded-lg border border-[var(--line)] bg-[var(--paper)] px-2 py-1.5 text-sm text-[var(--ink-soft)]">
+                {item.locations?.name ?? "위치 미지정"} (변경은 아래 &quot;사무실 이동&quot;에서)
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
