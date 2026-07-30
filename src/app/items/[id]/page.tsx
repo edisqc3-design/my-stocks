@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import QRCode from "qrcode";
 import { Trash2, ArrowLeft, Repeat, Pencil, Check, X, ImagePlus, ImageOff, Camera } from "lucide-react";
 
 type ItemDetail = {
@@ -44,6 +45,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   const [categories, setCategories] = useState<Category[]>([]);
   const [moveTarget, setMoveTarget] = useState("");
   const [editing, setEditing] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     name: "",
     categoryId: "",
@@ -113,6 +115,50 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   useEffect(() => {
     load();
   }, [load]);
+
+  // 라벨 프린터(M60) 직접 연결 대신, 바코드 값을 QR 이미지로 만들어 화면에서 저장/인쇄할 수 있게 함
+  useEffect(() => {
+    if (!item?.barcode) {
+      setQrDataUrl(null);
+      return;
+    }
+    let cancelled = false;
+    QRCode.toDataURL(item.barcode, { margin: 1, width: 240 })
+      .then((url) => {
+        if (!cancelled) setQrDataUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setQrDataUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [item?.barcode]);
+
+  function handleDownloadQr() {
+    if (!qrDataUrl || !item) return;
+    const a = document.createElement("a");
+    a.href = qrDataUrl;
+    a.download = `${item.name}-QR.png`;
+    a.click();
+  }
+
+  function handlePrintLabel() {
+    if (!qrDataUrl || !item) return;
+    const win = window.open("", "_blank", "width=420,height=560");
+    if (!win) return;
+    win.document.write(`<!doctype html>
+<html>
+<head><meta charset="utf-8" /><title>${item.name} 라벨</title></head>
+<body style="margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;">
+  <img src="${qrDataUrl}" style="width:220px;height:220px;" />
+  <p style="margin-top:12px;font-size:18px;font-weight:700;">${item.name}</p>
+  <p style="margin-top:4px;font-size:12px;color:#666;">${item.barcode ?? ""}</p>
+  <script>window.onload = function () { window.print(); };</script>
+</body>
+</html>`);
+    win.document.close();
+  }
 
   function photoUrl(path: string) {
     return supabase.storage.from("item-photos").getPublicUrl(path).data.publicUrl;
@@ -515,6 +561,43 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
           )}
         </div>
       </div>
+
+      {item.barcode && (
+        <div className="rounded-2xl bg-[var(--card)] p-4 shadow-sm lg:p-6">
+          <h2 className="mb-3 font-semibold">바코드 / QR</h2>
+          <div className="flex items-center gap-4">
+            {qrDataUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={qrDataUrl}
+                alt="QR 코드"
+                className="h-28 w-28 shrink-0 rounded-lg border border-[var(--line)] bg-white p-1"
+              />
+            ) : (
+              <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] text-xs text-[var(--ink-soft)]">
+                생성 중…
+              </div>
+            )}
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className="truncate text-sm text-[var(--ink-soft)]">{item.barcode}</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={handleDownloadQr}
+                  className="rounded-full border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)]"
+                >
+                  이미지 저장
+                </button>
+                <button
+                  onClick={handlePrintLabel}
+                  className="rounded-full bg-[var(--primary)] px-3 py-1.5 text-xs font-semibold text-white"
+                >
+                  인쇄하기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 구매 정보 */}
       <div className="rounded-2xl bg-[var(--card)] p-4 shadow-sm">
