@@ -104,13 +104,13 @@ export default function DashboardPage() {
 
       {/* 요약 카드 */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className="rounded-2xl bg-[var(--card)] p-4 shadow-sm">
+        <div className="rounded-2xl bg-[var(--card)] p-4 shadow-sm lg:p-6">
           <div className="flex items-center gap-2 text-[var(--ink-soft)]">
             <Package size={16} /> <span className="text-xs">총 품목</span>
           </div>
           <p className="mt-1 text-2xl font-bold">{loading ? "-" : totalItems}</p>
         </div>
-        <div className="rounded-2xl bg-[var(--card)] p-4 shadow-sm">
+        <div className="rounded-2xl bg-[var(--card)] p-4 shadow-sm lg:p-6">
           <div className="flex items-center gap-2 text-[var(--ink-soft)]">
             <Package size={16} /> <span className="text-xs">총 재고 수량</span>
           </div>
@@ -119,7 +119,7 @@ export default function DashboardPage() {
       </div>
 
       {/* 재고 부족 알림 */}
-      <section className="rounded-2xl bg-[var(--card)] p-4 shadow-sm">
+      <section className="rounded-2xl bg-[var(--card)] p-4 shadow-sm lg:p-6">
         <div className="mb-3 flex items-center gap-2">
           <AlertTriangle size={18} className="text-[var(--danger)]" />
           <h2 className="font-semibold">재고 부족 품목</h2>
@@ -147,7 +147,7 @@ export default function DashboardPage() {
       </section>
 
       {/* 최근 입출고 이력 */}
-      <section className="rounded-2xl bg-[var(--card)] p-4 shadow-sm">
+      <section className="rounded-2xl bg-[var(--card)] p-4 shadow-sm lg:p-6">
         <h2 className="mb-3 font-semibold">최근 입출고 이력</h2>
         {recent.length === 0 ? (
           <p className="py-4 text-center text-sm text-[var(--ink-soft)]">이력이 없습니다.</p>
