@@ -129,7 +129,7 @@ export default function DashboardPage() {
             부족한 품목이 없습니다.
           </p>
         ) : (
-          <div className="max-h-72 overflow-y-auto pr-1">
+          <div className="max-h-72 overflow-y-auto pr-4">
             <ul className="divide-y divide-[var(--line)]">
               {lowStock.map((item) => (
                 <li key={item.id} className="flex items-center justify-between py-2.5">
@@ -152,7 +152,7 @@ export default function DashboardPage() {
         {recent.length === 0 ? (
           <p className="py-4 text-center text-sm text-[var(--ink-soft)]">이력이 없습니다.</p>
         ) : (
-          <div className="max-h-96 overflow-y-auto pr-1">
+          <div className="max-h-96 overflow-y-auto pr-4">
             <ul className="divide-y divide-[var(--line)]">
               {recent.map((m) => (
                 <li key={m.id} className="flex items-center gap-3 py-2.5">
