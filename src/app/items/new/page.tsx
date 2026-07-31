@@ -222,16 +222,18 @@ function NewItemForm() {
             <label className="text-base font-medium text-[var(--ink-soft)]">사진</label>
             <button
               onClick={openCamera}
-              className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-3.5 py-2.5 text-sm font-medium text-[var(--ink-soft)]"
+              className="flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--line)] px-2 py-1.5 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm font-medium text-[var(--ink-soft)]"
             >
-              <Camera size={18} />
+              <Camera size={15} className="sm:hidden" />
+              <Camera size={18} className="hidden sm:block" />
               촬영
             </button>
             <button
               onClick={() => galleryInputRef.current?.click()}
-              className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-3.5 py-2.5 text-sm font-medium text-[var(--ink-soft)]"
+              className="flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--line)] px-2 py-1.5 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm font-medium text-[var(--ink-soft)]"
             >
-              <ImagePlus size={18} />
+              <ImagePlus size={15} className="sm:hidden" />
+              <ImagePlus size={18} className="hidden sm:block" />
               이미지 첨부
             </button>
           </div>
@@ -240,7 +242,7 @@ function NewItemForm() {
               <button
                 key={size}
                 onClick={() => setPhotoSize(size)}
-                className={`rounded-md px-4 py-2.5 text-sm font-medium transition-colors ${
+                className={`rounded-md px-2.5 py-1.5 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-medium transition-colors ${
                   photoSize === size
                     ? "bg-[var(--primary)] text-white"
                     : "text-[var(--ink-soft)]"
