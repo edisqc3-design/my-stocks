@@ -219,28 +219,28 @@ function NewItemForm() {
       <div>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-y-2">
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-[var(--ink-soft)]">사진</label>
+            <label className="text-base font-medium text-[var(--ink-soft)]">사진</label>
             <button
               onClick={openCamera}
-              className="flex items-center gap-1 rounded-lg border border-[var(--line)] px-2 py-1 text-xs font-medium text-[var(--ink-soft)]"
+              className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-3.5 py-2.5 text-sm font-medium text-[var(--ink-soft)]"
             >
-              <Camera size={14} />
+              <Camera size={18} />
               촬영
             </button>
             <button
               onClick={() => galleryInputRef.current?.click()}
-              className="flex items-center gap-1 rounded-lg border border-[var(--line)] px-2 py-1 text-xs font-medium text-[var(--ink-soft)]"
+              className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-3.5 py-2.5 text-sm font-medium text-[var(--ink-soft)]"
             >
-              <ImagePlus size={14} />
+              <ImagePlus size={18} />
               이미지 첨부
             </button>
           </div>
-          <div className="flex items-center gap-1 rounded-lg border border-[var(--line)] p-0.5">
+          <div className="flex items-center gap-1 rounded-lg border border-[var(--line)] p-1">
             {(["sm", "md", "lg"] as const).map((size) => (
               <button
                 key={size}
                 onClick={() => setPhotoSize(size)}
-                className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                className={`rounded-md px-4 py-2.5 text-sm font-medium transition-colors ${
                   photoSize === size
                     ? "bg-[var(--primary)] text-white"
                     : "text-[var(--ink-soft)]"
