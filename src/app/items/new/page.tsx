@@ -255,7 +255,12 @@ function NewItemForm() {
           {photos.map((p, i) => (
             <div key={i} className={`relative ${photoBoxClass} overflow-hidden rounded-xl border border-[var(--line)]`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p} alt="" className="h-full w-full object-cover" />
+              <img
+                src={p}
+                alt=""
+                className="block h-full w-full object-cover"
+                style={{ objectFit: "cover", width: "100%", height: "100%" }}
+              />
               <button
                 onClick={() => setPhotos((prev) => prev.filter((_, idx) => idx !== i))}
                 className={`absolute right-1 top-1 rounded-full bg-black/60 text-white ${photoDeleteBtnClass}`}
