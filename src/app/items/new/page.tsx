@@ -258,8 +258,8 @@ function NewItemForm() {
               <img
                 src={p}
                 alt=""
-                className="block h-full w-full object-cover"
-                style={{ objectFit: "cover", width: "100%", height: "100%" }}
+                className="block h-full w-full object-contain"
+                style={{ objectFit: "contain", width: "100%", height: "100%" }}
               />
               <button
                 onClick={() => setPhotos((prev) => prev.filter((_, idx) => idx !== i))}
