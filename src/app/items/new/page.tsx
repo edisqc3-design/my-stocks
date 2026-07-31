@@ -11,6 +11,8 @@ import { Camera, ImagePlus, X, ArrowLeft } from "lucide-react";
 type Location = { id: string; name: string };
 type Category = { id: string; name: string };
 
+const DRAFT_KEY = "new-item-draft";
+
 function NewItemForm() {
   const router = useRouter();
   const params = useSearchParams();
@@ -48,6 +50,39 @@ function NewItemForm() {
     supabase.from("locations").select("id, name").order("name").then(({ data }) => setLocations(data ?? []));
     supabase.from("categories").select("id, name").order("name").then(({ data }) => setCategories(data ?? []));
   }, []);
+
+  // 브라우저를 벗어났다가 돌아와도 입력 중이던 내용이 사라지지 않도록,
+  // 마운트 시 세션에 저장된 임시 입력값을 복원한다.
+  const draftLoadedRef = useRef(false);
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw) as {
+          form?: typeof form;
+          photos?: string[];
+          photoSize?: "sm" | "md" | "lg";
+        };
+        if (draft.form) setForm(draft.form);
+        if (draft.photos) setPhotos(draft.photos);
+        if (draft.photoSize) setPhotoSize(draft.photoSize);
+      }
+    } catch (err) {
+      console.error("임시 입력값 복원 실패:", err);
+    } finally {
+      draftLoadedRef.current = true;
+    }
+  }, []);
+
+  // 폼/사진/크기가 바뀔 때마다 세션에 자동 저장 (탭 전환, 다른 앱 갔다 오는 경우 등 대비)
+  useEffect(() => {
+    if (!draftLoadedRef.current) return;
+    try {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, photos, photoSize }));
+    } catch (err) {
+      console.error("임시 입력값 저장 실패:", err);
+    }
+  }, [form, photos, photoSize]);
 
   function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -192,6 +227,11 @@ function NewItemForm() {
     }
 
     setSaving(false);
+    try {
+      sessionStorage.removeItem(DRAFT_KEY);
+    } catch (err) {
+      console.error("임시 입력값 삭제 실패:", err);
+    }
     syncAll();
     router.push("/items");
   }
