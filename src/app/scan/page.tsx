@@ -70,25 +70,45 @@ function ScanForm() {
       }
     };
 
-    scanner
-      .start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 240, height: 240 } },
-        (decodedText) => handleDecoded(decodedText),
-        () => {}
-      )
-      .then(() => {
-        if (cancelled) {
-          // 시작이 끝나기 전에 이미 다른 화면으로 이동한 경우 바로 정지
-          shutdown();
-          return;
-        }
-        setScanning(true);
-      })
-      .catch(() => setScanning(false));
+    const startScanning = () => {
+      scanner
+        .start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 240, height: 240 } },
+          (decodedText) => handleDecoded(decodedText),
+          () => {}
+        )
+        .then(() => {
+          if (cancelled) {
+            // 시작이 끝나기 전에 이미 다른 화면으로 이동한 경우 바로 정지
+            shutdown();
+            return;
+          }
+          setScanning(true);
+        })
+        .catch(() => setScanning(false));
+    };
+
+    startScanning();
+
+    // 다른 메뉴 갔다가 돌아오는 경우(라우터가 화면을 완전히 새로 마운트하지 않을 수 있음) +
+    // 브라우저가 안 보이는 동안 카메라 스트림을 일시정지시켜 화면이 멈춰(검은 화면) 보이는 경우 대비:
+    // 화면이 다시 보일 때 스캐너가 실제로 동작 중이 아니면 다시 시작한다.
+    const onVisible = () => {
+      if (document.visibilityState !== "visible" || cancelled) return;
+      if (found || notFoundBarcode) return; // 결과 팝업이 떠 있는 동안엔 건드리지 않음
+      const state = scanner.getState();
+      if (state !== Html5QrcodeScannerState.SCANNING) {
+        startScanning();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
 
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
       shutdown();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
