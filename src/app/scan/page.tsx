@@ -70,7 +70,7 @@ function ScanForm() {
       }
     };
 
-    const startScanning = () => {
+    const startScanning = (attempt = 0) => {
       scanner
         .start(
           { facingMode: "environment" },
@@ -86,7 +86,18 @@ function ScanForm() {
           }
           setScanning(true);
         })
-        .catch(() => setScanning(false));
+        .catch(() => {
+          // 이전 카메라 스트림이 아직 완전히 해제되지 않은 상태에서 재요청하면
+          // 순간적으로 실패할 수 있다 (특히 안드로이드). 짧게 기다렸다가 재시도.
+          if (cancelled) return;
+          if (attempt < 3) {
+            setTimeout(() => {
+              if (!cancelled) startScanning(attempt + 1);
+            }, 600);
+          } else {
+            setScanning(false);
+          }
+        });
     };
 
     startScanning();
