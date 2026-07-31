@@ -56,6 +56,20 @@ function ScanForm() {
     scannerRef.current = scanner;
 
     // 카메라를 안전하게 정지 + 비디오 엘리먼트 정리 (정지 없이 DOM만 사라지면 브라우저가 죽는 문제 방지)
+    const forceReleaseCamera = () => {
+      // html5-qrcode의 stop()이 내부적으로 카메라 트랙을 완전히 해제하지 못하는 경우가 있어
+      // 실제 <video> 엘리먼트의 스트림 트랙을 직접 찾아 강제로 끊는다.
+      try {
+        const container = document.getElementById(SCANNER_ID);
+        const video = container?.querySelector("video");
+        const stream = video?.srcObject as MediaStream | null;
+        stream?.getTracks().forEach((track) => track.stop());
+        if (video) video.srcObject = null;
+      } catch {
+        // 이미 정리된 상태면 무시
+      }
+    };
+
     const shutdown = async () => {
       try {
         if (
@@ -68,6 +82,7 @@ function ScanForm() {
       } catch {
         // 이미 정지되었거나 정리된 상태면 무시
       }
+      forceReleaseCamera();
     };
 
     const startScanning = (attempt = 0) => {
