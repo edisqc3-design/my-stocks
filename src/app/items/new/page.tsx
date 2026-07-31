@@ -56,7 +56,10 @@ function NewItemForm() {
   // 자동 생성된 QR 코드가 그 사이에 이미 저장되어 있다면(중복 저장 방지) 새 코드로 교체한다.
   // 실제 스캔 바코드(codeType === "barcode")는 건드리지 않는다.
   async function refreshBarcodeIfAlreadyTaken(current: typeof form): Promise<typeof form> {
-    if (current.codeType !== "qr" || !current.barcode) return current;
+    if (current.codeType !== "qr") return current;
+    if (!current.barcode) {
+      return { ...current, barcode: `QR-${Date.now().toString(36).toUpperCase()}` };
+    }
     const { data: existing } = await supabase
       .from("items")
       .select("id")
@@ -469,6 +472,15 @@ function NewItemForm() {
         <input
           value={form.barcode}
           onChange={(e) => setForm({ ...form, barcode: e.target.value })}
+          onBlur={() => {
+            if (!form.barcode.trim()) {
+              setForm((prev) => ({
+                ...prev,
+                barcode: `QR-${Date.now().toString(36).toUpperCase()}`,
+                codeType: "qr",
+              }));
+            }
+          }}
           className="input font-mono text-sm"
         />
       </Field>
