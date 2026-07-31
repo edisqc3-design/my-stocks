@@ -225,10 +225,10 @@ function NewItemForm() {
     setSaving(true);
     const clientUuid = crypto.randomUUID();
 
-    // 리셋 등으로 바코드/QR 값이 비어 있으면 저장 직전에 새로 채운다.
+    // 리셋 등으로 바코드/QR 값이 비어 있으면 저장 직전에 DB 확인 후 새로 채운다.
     let saveForm = form;
     if (!saveForm.barcode.trim()) {
-      saveForm = { ...saveForm, barcode: `QR-${Date.now().toString(36).toUpperCase()}`, codeType: "qr" };
+      saveForm = await refreshBarcodeIfAlreadyTaken({ ...saveForm, barcode: "", codeType: "qr" as const });
       setForm(saveForm);
     }
 
@@ -326,14 +326,15 @@ function NewItemForm() {
     router.push("/items");
   }
 
-  function handleReset() {
+  async function handleReset() {
     if (!confirm("입력한 내용과 사진, 바코드/QR 값을 모두 초기화할까요? (실제 바코드는 다시 스캔해주세요)")) return;
+    // 새로 발급하는 QR 코드도 DB에 이미 있는지 확인 후 채운다.
+    const freshCode = await refreshBarcodeIfAlreadyTaken({ barcode: "", codeType: "qr" as const });
     setForm((prev) => ({
       ...prev,
-      // 스캔 바코드든 자동 생성 QR이든 리셋 시 완전히 비운다.
-      // 다시 스캔하지 않고 그대로 저장하면 저장 시점에 새 QR 코드가 자동으로 채워진다.
-      barcode: "",
-      codeType: "qr",
+      // 스캔 바코드든 자동 생성 QR이든 리셋 시 완전히 비우고, DB 확인을 거친 새 코드로 채운다.
+      barcode: freshCode.barcode,
+      codeType: freshCode.codeType,
       name: "",
       categoryId: "",
       locationId: "",
@@ -501,13 +502,10 @@ function NewItemForm() {
         <input
           value={form.barcode}
           onChange={(e) => setForm({ ...form, barcode: e.target.value })}
-          onBlur={() => {
+          onBlur={async () => {
             if (!form.barcode.trim()) {
-              setForm((prev) => ({
-                ...prev,
-                barcode: `QR-${Date.now().toString(36).toUpperCase()}`,
-                codeType: "qr",
-              }));
+              const fresh = await refreshBarcodeIfAlreadyTaken({ barcode: "", codeType: "qr" as const });
+              setForm((prev) => ({ ...prev, ...fresh }));
             }
           }}
           className="input font-mono text-sm"
