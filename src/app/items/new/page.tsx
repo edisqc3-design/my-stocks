@@ -53,25 +53,66 @@ function NewItemForm() {
 
   // 브라우저를 벗어났다가 돌아와도 입력 중이던 내용이 사라지지 않도록,
   // 마운트 시 세션에 저장된 임시 입력값을 복원한다.
+  // 자동 생성된 QR 코드가 그 사이에 이미 저장되어 있다면(중복 저장 방지) 새 코드로 교체한다.
+  // 실제 스캔 바코드(codeType === "barcode")는 건드리지 않는다.
+  async function refreshBarcodeIfAlreadyTaken(current: typeof form): Promise<typeof form> {
+    if (current.codeType !== "qr" || !current.barcode) return current;
+    const { data: existing } = await supabase
+      .from("items")
+      .select("id")
+      .eq("barcode", current.barcode)
+      .maybeSingle();
+    if (!existing) return current;
+    return { ...current, barcode: `QR-${Date.now().toString(36).toUpperCase()}` };
+  }
+
   const draftLoadedRef = useRef(false);
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(DRAFT_KEY);
-      if (raw) {
-        const draft = JSON.parse(raw) as {
-          form?: typeof form;
-          photos?: string[];
-          photoSize?: "sm" | "md" | "lg";
-        };
-        if (draft.form) setForm(draft.form);
-        if (draft.photos) setPhotos(draft.photos);
-        if (draft.photoSize) setPhotoSize(draft.photoSize);
+    async function restoreDraft() {
+      try {
+        const raw = localStorage.getItem(DRAFT_KEY);
+        if (raw) {
+          const draft = JSON.parse(raw) as {
+            form?: typeof form;
+            photos?: string[];
+            photoSize?: "sm" | "md" | "lg";
+          };
+          if (draft.form) {
+            setForm(await refreshBarcodeIfAlreadyTaken(draft.form));
+          }
+          if (draft.photos) setPhotos(draft.photos);
+          if (draft.photoSize) setPhotoSize(draft.photoSize);
+        }
+      } catch (err) {
+        console.error("임시 입력값 복원 실패:", err);
+      } finally {
+        draftLoadedRef.current = true;
       }
-    } catch (err) {
-      console.error("임시 입력값 복원 실패:", err);
-    } finally {
-      draftLoadedRef.current = true;
     }
+    restoreDraft();
+  }, []);
+
+  // 탭/앱이 살아있는 채로 다른 곳에 갔다가 되돌아온 경우에도(홈 화면, 다른 탭/창 등)
+  // 그 사이에 같은 자동 생성 코드로 다른 곳에서 저장이 이뤄졌을 수 있으므로 다시 확인한다.
+  const formRef = useRef(form);
+  formRef.current = form;
+  const savingRef = useRef(saving);
+  savingRef.current = saving;
+  useEffect(() => {
+    async function recheck() {
+      if (!draftLoadedRef.current || savingRef.current) return;
+      const updated = await refreshBarcodeIfAlreadyTaken(formRef.current);
+      if (updated.barcode !== formRef.current.barcode) setForm(updated);
+    }
+    function onVisible() {
+      if (document.visibilityState === "visible") recheck();
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", recheck);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", recheck);
+    };
   }, []);
 
   // 폼/사진/크기가 바뀔 때마다 세션에 자동 저장 (탭 전환, 다른 앱 갔다 오는 경우 등 대비)
@@ -182,6 +223,24 @@ function NewItemForm() {
         .single();
 
       if (error) {
+        if (error.code === "23505" || error.message.includes("items_barcode_key")) {
+          const { data: existing } = await supabase
+            .from("items")
+            .select("id, name")
+            .eq("barcode", form.barcode)
+            .maybeSingle();
+
+          if (existing) {
+            const goToExisting = confirm(
+              `이미 등록된 품목입니다: "${existing.name}"\n해당 품목 화면으로 이동할까요?`
+            );
+            setSaving(false);
+            if (goToExisting) {
+              router.push(`/items/${existing.id}`);
+            }
+            return;
+          }
+        }
         alert(`저장 실패: ${error.message}`);
         setSaving(false);
         return;
@@ -240,6 +299,9 @@ function NewItemForm() {
     if (!confirm("바코드/QR 값을 제외한 모든 입력 내용과 사진을 초기화할까요?")) return;
     setForm((prev) => ({
       ...prev,
+      // 실제로 스캔한 바코드(codeType === "barcode")는 그대로 유지하되,
+      // 자동 생성된 QR 코드는 이전 값이 이미 저장된 품목의 것일 수 있으므로 새로 생성한다.
+      barcode: prev.codeType === "qr" ? `QR-${Date.now().toString(36).toUpperCase()}` : prev.barcode,
       name: "",
       categoryId: "",
       locationId: "",
