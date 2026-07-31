@@ -56,7 +56,7 @@ function NewItemForm() {
   const draftLoadedRef = useRef(false);
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem(DRAFT_KEY);
+      const raw = localStorage.getItem(DRAFT_KEY);
       if (raw) {
         const draft = JSON.parse(raw) as {
           form?: typeof form;
@@ -78,7 +78,7 @@ function NewItemForm() {
   useEffect(() => {
     if (!draftLoadedRef.current) return;
     try {
-      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, photos, photoSize }));
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ form, photos, photoSize }));
     } catch (err) {
       console.error("임시 입력값 저장 실패:", err);
     }
@@ -228,12 +228,32 @@ function NewItemForm() {
 
     setSaving(false);
     try {
-      sessionStorage.removeItem(DRAFT_KEY);
+      localStorage.removeItem(DRAFT_KEY);
     } catch (err) {
       console.error("임시 입력값 삭제 실패:", err);
     }
     syncAll();
     router.push("/items");
+  }
+
+  function handleReset() {
+    if (!confirm("바코드/QR 값을 제외한 모든 입력 내용과 사진을 초기화할까요?")) return;
+    setForm((prev) => ({
+      ...prev,
+      name: "",
+      categoryId: "",
+      locationId: "",
+      quantity: 0,
+      minQuantity: 0,
+      supplier: "",
+      purchaseDate: "",
+      unitPrice: 0,
+      reorderUrl: "",
+      expiryDate: "",
+      memo: "",
+    }));
+    setPhotos([]);
+    setPhotoSize("lg");
   }
 
   const photoBoxClass = {
@@ -253,7 +273,15 @@ function NewItemForm() {
       <Link href="/items" className="flex items-center gap-1 text-sm text-[var(--ink-soft)]">
         <ArrowLeft size={16} /> 품목 목록
       </Link>
-      <h1 className="text-xl font-bold">신규 품목 등록</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold">신규 품목 등록</h1>
+        <button
+          onClick={handleReset}
+          className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-soft)]"
+        >
+          리셋
+        </button>
+      </div>
 
       {/* 사진 */}
       <div>
