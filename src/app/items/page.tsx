@@ -300,7 +300,7 @@ export default function ItemsPage() {
                         <img
                           src={thumbUrl}
                           alt=""
-                          className="h-full w-full object-cover"
+                          className="h-full w-full object-contain"
                           onError={() => setBrokenThumbs((prev) => new Set(prev).add(item.id))}
                         />
                       ) : (
