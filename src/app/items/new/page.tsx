@@ -57,34 +57,51 @@ function NewItemForm() {
   // 실제 스캔 바코드(codeType === "barcode")는 건드리지 않는다.
   async function refreshBarcodeIfAlreadyTaken(current: typeof form): Promise<typeof form> {
     if (current.codeType !== "qr") return current;
-    if (!current.barcode) {
-      return { ...current, barcode: `QR-${Date.now().toString(36).toUpperCase()}` };
+    let candidate = current.barcode;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      if (!candidate) {
+        candidate = `QR-${Date.now().toString(36).toUpperCase()}`;
+        continue;
+      }
+      const { data: existing } = await supabase
+        .from("items")
+        .select("id")
+        .eq("barcode", candidate)
+        .maybeSingle();
+      if (!existing) break;
+      candidate = `QR-${Date.now().toString(36).toUpperCase()}`;
     }
-    const { data: existing } = await supabase
-      .from("items")
-      .select("id")
-      .eq("barcode", current.barcode)
-      .maybeSingle();
-    if (!existing) return current;
-    return { ...current, barcode: `QR-${Date.now().toString(36).toUpperCase()}` };
+    return candidate === current.barcode ? current : { ...current, barcode: candidate };
   }
+
+  // 페이지를 처음 열 때 자동 생성(또는 스캔으로 전달)된 바코드/QR 값.
+  // 임시저장 복원 과정과 절대 충돌하지 않도록, 이 값은 draft에 저장/복원하지 않는다.
+  const initialBarcodeRef = useRef({ barcode: form.barcode, codeType: form.codeType });
 
   const draftLoadedRef = useRef(false);
   useEffect(() => {
     async function restoreDraft() {
       try {
+        // 최초 생성된 QR 코드가 이미 DB에 존재하는지 확인하고, 있으면 새로 발급한다.
+        const checked = await refreshBarcodeIfAlreadyTaken(initialBarcodeRef.current);
+        initialBarcodeRef.current = { barcode: checked.barcode, codeType: checked.codeType };
+
         const raw = localStorage.getItem(DRAFT_KEY);
         if (raw) {
           const draft = JSON.parse(raw) as {
-            form?: typeof form;
+            form?: Omit<typeof form, "barcode" | "codeType">;
             photos?: string[];
             photoSize?: "sm" | "md" | "lg";
           };
           if (draft.form) {
-            setForm(await refreshBarcodeIfAlreadyTaken(draft.form));
+            setForm({ ...draft.form, ...initialBarcodeRef.current });
+          } else {
+            setForm((prev) => ({ ...prev, ...initialBarcodeRef.current }));
           }
           if (draft.photos) setPhotos(draft.photos);
           if (draft.photoSize) setPhotoSize(draft.photoSize);
+        } else {
+          setForm((prev) => ({ ...prev, ...initialBarcodeRef.current }));
         }
       } catch (err) {
         console.error("임시 입력값 복원 실패:", err);
@@ -94,6 +111,7 @@ function NewItemForm() {
     }
     restoreDraft();
   }, []);
+
 
   // 탭/앱이 살아있는 채로 다른 곳에 갔다가 되돌아온 경우에도(홈 화면, 다른 탭/창 등)
   // 그 사이에 같은 자동 생성 코드로 다른 곳에서 저장이 이뤄졌을 수 있으므로 다시 확인한다.
@@ -119,10 +137,12 @@ function NewItemForm() {
   }, []);
 
   // 폼/사진/크기가 바뀔 때마다 세션에 자동 저장 (탭 전환, 다른 앱 갔다 오는 경우 등 대비)
+  // 바코드/QR 값은 의도적으로 제외한다 (매번 새로 생성되거나 스캔값을 써야 하므로).
   useEffect(() => {
     if (!draftLoadedRef.current) return;
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ form, photos, photoSize }));
+      const { barcode: _barcode, codeType: _codeType, ...formWithoutCode } = form;
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ form: formWithoutCode, photos, photoSize }));
     } catch (err) {
       console.error("임시 입력값 저장 실패:", err);
     }
@@ -204,14 +224,21 @@ function NewItemForm() {
     setSaving(true);
     const clientUuid = crypto.randomUUID();
 
+    // 리셋 등으로 바코드/QR 값이 비어 있으면 저장 직전에 새로 채운다.
+    let saveForm = form;
+    if (!saveForm.barcode.trim()) {
+      saveForm = { ...saveForm, barcode: `QR-${Date.now().toString(36).toUpperCase()}`, codeType: "qr" };
+      setForm(saveForm);
+    }
+
     if (navigator.onLine) {
       const { data, error } = await supabase
         .from("items")
         .insert({
-          name: form.name,
-          barcode: form.barcode,
-          code_type: form.codeType,
-          category_id: form.categoryId || null,
+          name: saveForm.name,
+          barcode: saveForm.barcode,
+          code_type: saveForm.codeType,
+          category_id: saveForm.categoryId || null,
           location_id: form.locationId || null,
           quantity: form.quantity,
           min_quantity: form.minQuantity,
@@ -230,7 +257,7 @@ function NewItemForm() {
           const { data: existing } = await supabase
             .from("items")
             .select("id, name")
-            .eq("barcode", form.barcode)
+            .eq("barcode", saveForm.barcode)
             .maybeSingle();
 
           if (existing) {
@@ -269,9 +296,9 @@ function NewItemForm() {
     } else {
       await db.pendingItems.add({
         clientUuid,
-        name: form.name,
-        barcode: form.barcode,
-        codeType: form.codeType,
+        name: saveForm.name,
+        barcode: saveForm.barcode,
+        codeType: saveForm.codeType,
         categoryId: form.categoryId || undefined,
         locationId: form.locationId || undefined,
         quantity: form.quantity,
@@ -299,12 +326,13 @@ function NewItemForm() {
   }
 
   function handleReset() {
-    if (!confirm("바코드/QR 값을 제외한 모든 입력 내용과 사진을 초기화할까요?")) return;
+    if (!confirm("입력한 내용과 사진, 바코드/QR 값을 모두 초기화할까요? (실제 바코드는 다시 스캔해주세요)")) return;
     setForm((prev) => ({
       ...prev,
-      // 실제로 스캔한 바코드(codeType === "barcode")는 그대로 유지하되,
-      // 자동 생성된 QR 코드는 이전 값이 이미 저장된 품목의 것일 수 있으므로 새로 생성한다.
-      barcode: prev.codeType === "qr" ? `QR-${Date.now().toString(36).toUpperCase()}` : prev.barcode,
+      // 스캔 바코드든 자동 생성 QR이든 리셋 시 완전히 비운다.
+      // 다시 스캔하지 않고 그대로 저장하면 저장 시점에 새 QR 코드가 자동으로 채워진다.
+      barcode: "",
+      codeType: "qr",
       name: "",
       categoryId: "",
       locationId: "",
