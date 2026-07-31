@@ -273,7 +273,7 @@ function NewItemForm() {
       <Link href="/items" className="flex items-center gap-1 text-sm text-[var(--ink-soft)]">
         <ArrowLeft size={16} /> 품목 목록
       </Link>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
         <h1 className="text-xl font-bold">신규 품목 등록</h1>
         <button
           onClick={handleReset}
