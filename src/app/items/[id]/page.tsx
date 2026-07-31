@@ -529,7 +529,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
             <input
               type="number"
               inputMode="numeric"
-              value={editForm.quantity}
+              value={editForm.quantity === 0 ? "" : editForm.quantity}
               onChange={(e) =>
                 setEditForm({ ...editForm, quantity: Math.max(0, Number(e.target.value) || 0) })
               }
@@ -550,7 +550,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
             <input
               type="number"
               inputMode="numeric"
-              value={editForm.minQuantity}
+              value={editForm.minQuantity === 0 ? "" : editForm.minQuantity}
               onChange={(e) =>
                 setEditForm({ ...editForm, minQuantity: Math.max(0, Number(e.target.value) || 0) })
               }
