@@ -55,7 +55,8 @@ function NewItemForm() {
   // 마운트 시 세션에 저장된 임시 입력값을 복원한다.
   // 자동 생성된 QR 코드가 그 사이에 이미 저장되어 있다면(중복 저장 방지) 새 코드로 교체한다.
   // 실제 스캔 바코드(codeType === "barcode")는 건드리지 않는다.
-  async function refreshBarcodeIfAlreadyTaken(current: typeof form): Promise<typeof form> {
+  type CodeFields = { barcode: string; codeType: "barcode" | "qr" };
+  async function refreshBarcodeIfAlreadyTaken<T extends CodeFields>(current: T): Promise<T> {
     if (current.codeType !== "qr") return current;
     let candidate = current.barcode;
     for (let attempt = 0; attempt < 5; attempt++) {
