@@ -387,7 +387,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                     <img
                       src={photoUrl(p.storage_path)}
                       alt={item.name}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-contain"
                       onError={() => setBrokenPhotoIds((prev) => new Set(prev).add(p.id))}
                     />
                   )}
