@@ -11,7 +11,10 @@ jobs:
     steps:
       - name: Ping Supabase to prevent auto-pause
         run: |
-          curl -sf "${{ secrets.SUPABASE_URL }}/rest/v1/?select=1" \
+          curl -s -o response.txt -w "HTTP_STATUS:%{http_code}\n" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/?select=1" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
+          echo "--- Response body ---"
+          cat response.txt
           echo "Supabase ping 완료: $(date)"
