@@ -1,1 +1,18 @@
+name: Supabase Keep-Alive
 
+on:
+  schedule:
+    # 매주 화요일과 금요일 UTC 03:00 (한국시간 12:00)에 실행 → 5일 주기 방지
+    - cron: '0 3 * * 2,5'
+  workflow_dispatch: {} # 수동 실행 버튼도 사용 가능
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase to prevent auto-pause
+        run: |
+          curl -sf "${{ secrets.SUPABASE_URL }}/rest/v1/?select=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
+          echo "Supabase ping 완료: $(date)"
