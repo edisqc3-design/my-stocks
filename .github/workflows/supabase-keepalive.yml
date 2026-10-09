@@ -10,11 +10,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Supabase to prevent auto-pause
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          curl -s -o response.txt -w "HTTP_STATUS:%{http_code}\n" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/?select=1" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
+          STATUS=$(curl -s -o response.txt -w "%{http_code}" \
+            "$SUPABASE_URL/rest/v1/locations?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
+          echo "HTTP_STATUS:$STATUS"
           echo "--- Response body ---"
           cat response.txt
-          echo "Supabase ping 완료: $(date)"
+          echo
+          # 200 = 정상 조회, 42501 = RLS/권한 거부(DB까지 도달했으므로 활성 상태 유지에는 문제 없음)
+          if [ "$STATUS" = "200" ] || grep -q '"42501"' response.txt; then
+            echo "Supabase ping 성공: $(date)"
+          else
+            echo "Supabase ping 실패 (URL/키/테이블 확인 필요): $(date)"
+            exit 1
+          fi
