@@ -31,6 +31,9 @@ type SearchResult = {
 
 const SCANNER_ID = "scan-reader";
 
+// 출고 사유 빠른 선택 (직접 입력도 가능)
+const OUT_REASONS = ["현장 사용", "고장/폐기", "분실", "다른 사무실 지급"];
+
 function ScanForm() {
   const router = useRouter();
   const params = useSearchParams();
@@ -42,6 +45,7 @@ function ScanForm() {
   const [found, setFound] = useState<ScannedItem | null>(null);
   const [notFoundBarcode, setNotFoundBarcode] = useState<string | null>(null);
   const [amount, setAmount] = useState(1);
+  const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [manualMode, setManualMode] = useState(false);
   const [manualQuery, setManualQuery] = useState("");
@@ -266,6 +270,7 @@ function ScanForm() {
     setFound(null);
     setNotFoundBarcode(null);
     setAmount(1);
+    setReason("");
     setManualQuery("");
     setSearchResults([]);
     scannerRef.current?.resume();
@@ -276,12 +281,14 @@ function ScanForm() {
     setBusy(true);
     const change = type === "in" ? amount : -amount;
     const clientUuid = crypto.randomUUID();
+    const note = reason.trim() || null;
 
     if (navigator.onLine) {
       await supabase.from("stock_movements").insert({
         item_id: found.id,
         type,
         quantity_change: change,
+        note,
         client_uuid: clientUuid,
       });
       // items.quantity는 DB 트리거(trg_stock_movements_apply)가 자동으로 반영합니다.
@@ -291,6 +298,7 @@ function ScanForm() {
         itemBarcode: found.barcode,
         type,
         quantityChange: change,
+        note: note ?? undefined,
         createdAt: new Date().toISOString(),
         synced: false,
       });
@@ -436,6 +444,35 @@ function ScanForm() {
               +
             </button>
           </div>
+
+          {mode !== "in" && (
+            <div className="mb-4 space-y-2">
+              <div className="flex flex-wrap gap-2">
+                {OUT_REASONS.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setReason(r)}
+                    className="rounded-full px-3 py-1 text-xs font-medium"
+                    style={{
+                      background: reason === r ? "var(--primary)" : "var(--card)",
+                      color: reason === r ? "#fff" : "var(--ink-soft)",
+                      border: reason === r ? "none" : "1px solid var(--line)",
+                    }}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+              <input
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="출고 사유 (직접 입력, 선택)"
+                maxLength={100}
+                className="w-full rounded-xl border border-[var(--line)] bg-[var(--card)] px-3 py-2 text-sm"
+              />
+            </div>
+          )}
 
           {mode === "in" ? (
             <button
