@@ -789,7 +789,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                         />
                         <input
                           type="text"
-                          placeholder="메모"
+                          placeholder="사유/메모"
                           value={editMovementNote}
                           onChange={(e) => setEditMovementNote(e.target.value)}
                           className="flex-1 rounded-lg border border-[var(--line)] px-2 py-1 text-sm"
@@ -814,7 +814,11 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                         <span className="text-[var(--ink-soft)]">
                           {new Date(m.created_at).toLocaleString("ko-KR")}
                         </span>
-                        {m.note && <p className="text-xs text-[var(--ink-soft)]">{m.note}</p>}
+                        {m.note && (
+                          <p className="text-xs font-medium text-[var(--ink)]">
+                            사유: {m.note}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <span style={{ color: m.quantity_change >= 0 ? "var(--ok)" : "var(--danger)" }}>
