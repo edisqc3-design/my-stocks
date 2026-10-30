@@ -31,8 +31,9 @@ type SearchResult = {
 
 const SCANNER_ID = "scan-reader";
 
-// 출고 사유 빠른 선택 (직접 입력도 가능)
+// 입출고 사유 빠른 선택 (직접 입력도 가능)
 const OUT_REASONS = ["현장 사용", "고장/폐기", "분실", "다른 사무실 지급"];
+const IN_REASONS = ["신규 구매", "반품/회수", "재고 정정", "다른 사무실에서 받음"];
 
 function ScanForm() {
   const router = useRouter();
@@ -445,10 +446,9 @@ function ScanForm() {
             </button>
           </div>
 
-          {mode !== "in" && (
-            <div className="mb-4 space-y-2">
+          <div className="mb-4 space-y-2">
               <div className="flex flex-wrap gap-2">
-                {OUT_REASONS.map((r) => (
+                {(mode === "in" ? IN_REASONS : mode === "out" ? OUT_REASONS : [...IN_REASONS, ...OUT_REASONS]).map((r) => (
                   <button
                     key={r}
                     type="button"
@@ -467,12 +467,11 @@ function ScanForm() {
               <input
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="출고 사유 (직접 입력, 선택)"
+                placeholder={`${mode === "in" ? "입고" : mode === "out" ? "출고" : "입출고"} 사유 (직접 입력, 선택)`}
                 maxLength={100}
                 className="w-full rounded-xl border border-[var(--line)] bg-[var(--card)] px-3 py-2 text-sm"
               />
-            </div>
-          )}
+          </div>
 
           {mode === "in" ? (
             <button
