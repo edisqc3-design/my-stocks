@@ -33,9 +33,9 @@ export default function UserBadge() {
   if (!email) return null;
 
   return (
-    <div className="flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-medium text-[var(--ink)] shadow-[0_1px_2px_rgba(36,31,54,0.08)]">
+    <div className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-medium text-[var(--ink)] shadow-[0_1px_2px_rgba(36,31,54,0.08)]">
       <User size={14} className="shrink-0 text-[var(--primary)]" />
-      <span title={email} className="min-w-0 flex-1 truncate">
+      <span title={email} className="min-w-0 truncate">
         {email}
       </span>
       <button
