@@ -43,7 +43,7 @@ function SideNavLinks() {
   const currentMode = searchParams.get("mode");
 
   return (
-    <ul className="flex flex-1 flex-col gap-1">
+    <ul className="flex flex-col gap-1">
       {TABS.map(({ href, label, icon: Icon }) => {
         const active = isTabActive(href, pathname, currentMode);
         return (
@@ -74,11 +74,13 @@ export default function SideNav() {
         <span className="text-lg font-bold">재고관리</span>
       </div>
 
-      <Suspense fallback={<ul className="flex-1" />}>
+      <Suspense fallback={<ul />}>
         <SideNavLinks />
       </Suspense>
 
-      <UserBadge />
+      <div className="mt-4 border-t border-[var(--line)] pt-4">
+        <UserBadge />
+      </div>
     </aside>
   );
 }
